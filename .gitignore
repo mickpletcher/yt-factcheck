@@ -226,5 +226,12 @@ __marimo__/
 /reports/*
 !/reports/.gitkeep
 
+# Frontend runtime outputs
+/frontend/node_modules/
+/frontend/dist/
+/frontend/*.tsbuildinfo
+/frontend/vite.config.d.ts
+/frontend/vite.config.js
+
 # VS Code workspace files
 *.code-workspace

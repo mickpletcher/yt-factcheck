@@ -24,6 +24,9 @@ Claim extraction is implemented behind a minimal pluggable LLM provider interfac
 - pytest
 - Ruff
 - mypy
+- React
+- Vite
+- TypeScript
 - Docker
 - GitHub Actions
 
@@ -33,6 +36,7 @@ Claim extraction is implemented behind a minimal pluggable LLM provider interfac
 .
 ├── .github/workflows/ci.yml
 ├── reports/
+├── frontend/
 ├── storage/
 ├── src/evidencechain/
 │   ├── api/
@@ -78,12 +82,39 @@ Expected response:
 }
 ```
 
+## Run Frontend
+
+The React dashboard lives in `frontend/`.
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+Open `http://127.0.0.1:5173`.
+
+The Vite dev server proxies `/api` to `http://127.0.0.1:8000`, so start the FastAPI backend first.
+
+The dashboard supports:
+
+- YouTube URL transcript ingestion
+- Transcript file upload
+- Live client side pipeline progress
+- Searchable claims
+- Expandable evidence sections
+- Timestamp links back to YouTube
+- Verdict inspection
+- HTML, Markdown, and JSON report viewing
+
 ## Test
 
 ```powershell
 pytest
 ruff check .
 mypy src
+cd frontend
+npm run build
 ```
 
 ## Docker
