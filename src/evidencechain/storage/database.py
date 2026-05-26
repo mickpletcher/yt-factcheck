@@ -136,6 +136,22 @@ ON evidence_sources(run_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_evidence_sources_run_url
 ON evidence_sources(run_id, url);
 
+CREATE TABLE IF NOT EXISTS scoring_results (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    claim_id INTEGER NOT NULL,
+    verdict TEXT NOT NULL,
+    confidence REAL NOT NULL,
+    explanation TEXT NOT NULL,
+    cited_evidence_ids_json TEXT NOT NULL,
+    comparisons_json TEXT NOT NULL,
+    safeguards_json TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(claim_id) REFERENCES claims(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_scoring_results_claim_id
+ON scoring_results(claim_id);
+
 CREATE TABLE IF NOT EXISTS search_cache (
     provider TEXT NOT NULL,
     query TEXT NOT NULL,

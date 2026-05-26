@@ -8,7 +8,8 @@ The intended workflow is:
 2. Identify timestamped claims.
 3. Retrieve evidence from trusted sources.
 4. Compare evidence against each claim.
-5. Generate a timestamped verification report with citations.
+5. Score an explainable verdict with stored evidence citations.
+6. Generate a timestamped verification report with citations.
 
 Claim extraction is implemented behind a minimal pluggable LLM provider interface. Evidence retrieval is implemented behind a swappable search provider interface. Brave Search is functional now. Tavily, Bing Search, and SerpAPI are wired as optional provider slots but are not implemented yet.
 
@@ -152,6 +153,9 @@ Only `sqlite+aiosqlite` database URLs are supported initially.
 | `GET` | `/api/v1/claims/{claim_id}` | Return one stored claim |
 | `POST` | `/api/v1/evidence/retrieve` | Retrieve, rank, dedupe, and store evidence for a claim |
 | `GET` | `/api/v1/evidence/claims/{claim_id}` | Return stored evidence for a claim |
+| `POST` | `/api/v1/scoring/score` | Score a stored claim using stored evidence |
+| `POST` | `/api/v1/scoring/claims/{claim_id}` | Score a stored claim by path id |
+| `GET` | `/api/v1/scoring/claims/{claim_id}` | Return stored scoring results for a claim |
 
 ## Development Notes
 
@@ -161,4 +165,6 @@ Claim extraction is implemented in `src/evidencechain/services/claim_service.py`
 
 Evidence retrieval is implemented in `src/evidencechain/services/evidence_service.py`. It converts a claim into optimized search queries, runs async parallel searches, caches provider results in SQLite, removes duplicate URLs, scores source credibility and relevance, stores evidence retrieval runs, and preserves source attribution.
 
-Detailed API docs are in `docs/transcripts-api.md`, `docs/claims-api.md`, and `docs/evidence-api.md`.
+Verdict scoring is implemented in `src/evidencechain/services/scoring_service.py`. It compares stored evidence snippets against stored claims, assigns support or contradiction relationships, validates cited evidence IDs, blocks fabricated citations, and returns `Unverified` when evidence is insufficient.
+
+Detailed API docs are in `docs/transcripts-api.md`, `docs/claims-api.md`, `docs/evidence-api.md`, and `docs/scoring-api.md`.

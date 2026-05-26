@@ -24,6 +24,21 @@ class ClaimStatus(StrEnum):
     inconclusive = "inconclusive"
 
 
+class Verdict(StrEnum):
+    true = "True"
+    mostly_true = "Mostly True"
+    misleading = "Misleading"
+    unverified = "Unverified"
+    false = "False"
+    needs_context = "Needs Context"
+
+
+class EvidenceRelationship(StrEnum):
+    supports = "supports"
+    contradicts = "contradicts"
+    neutral = "neutral"
+
+
 class Claim(BaseModel):
     id: int | None = None
     transcript_id: int | None = None
@@ -234,3 +249,41 @@ class VerificationResult(BaseModel):
     confidence: float = Field(default=0.0, ge=0.0, le=1.0)
     evidence: list[RetrievedEvidence] = Field(default_factory=list)
     rationale: str = ""
+
+
+class EvidenceComparison(BaseModel):
+    evidence_id: int = Field(gt=0)
+    relationship: EvidenceRelationship
+    relevance_score: float = Field(ge=0.0, le=1.0)
+    stance_score: float = Field(ge=-1.0, le=1.0)
+    explanation: str
+
+
+class VerdictSafeguards(BaseModel):
+    stored_evidence_only: bool
+    has_sufficient_evidence: bool
+    citation_validation_passed: bool
+    blocked_reasons: list[str] = Field(default_factory=list)
+
+
+class ScoringRequest(BaseModel):
+    claim_id: int = Field(gt=0)
+    min_evidence: int = Field(default=2, ge=1, le=10)
+
+
+class ScoringResult(BaseModel):
+    id: int | None = None
+    claim: Claim
+    verdict: Verdict
+    confidence: float = Field(ge=0.0, le=1.0)
+    explanation: str
+    evidence: list[RetrievedEvidence]
+    comparisons: list[EvidenceComparison]
+    cited_evidence_ids: list[int]
+    safeguards: VerdictSafeguards
+    created_at: datetime | None = None
+
+
+class ScoringList(BaseModel):
+    claim_id: int
+    results: list[ScoringResult]
