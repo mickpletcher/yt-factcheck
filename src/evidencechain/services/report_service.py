@@ -1,5 +1,6 @@
 from html import escape
 from pathlib import Path
+from time import time
 
 from evidencechain.core.config import Settings, get_settings
 from evidencechain.models.factcheck import Claim, RetrievedEvidence, ScoringResult, Verdict
@@ -75,12 +76,38 @@ class ReportService:
         report_format: ReportFormat,
         output_dir: Path | None = None,
     ) -> Path:
-        target_dir = output_dir or Path("reports")
+        target_dir = output_dir or Path(self.settings.report_export_dir)
         target_dir.mkdir(parents=True, exist_ok=True)
         extension = "md" if report_format == ReportFormat.markdown else report_format.value
         target = target_dir / f"transcript-{transcript_id}.{extension}"
         target.write_text(await self.render_report(transcript_id, report_format), encoding="utf-8")
         return target
+
+    def cleanup_exports(
+        self,
+        output_dir: Path | None = None,
+        retention_days: int | None = None,
+    ) -> dict[str, int]:
+        target_dir = output_dir or Path(self.settings.report_export_dir)
+        days = (
+            self.settings.report_export_retention_days
+            if retention_days is None
+            else retention_days
+        )
+        if not target_dir.exists() or days < 0:
+            return {"deleted": 0, "kept": 0}
+        cutoff = time() - (days * 86400)
+        deleted = 0
+        kept = 0
+        for path in target_dir.glob("transcript-*.*"):
+            if not path.is_file():
+                continue
+            if path.stat().st_mtime < cutoff:
+                path.unlink()
+                deleted += 1
+            else:
+                kept += 1
+        return {"deleted": deleted, "kept": kept}
 
     def render_html(self, report: ReportExport) -> str:
         return HTML_REPORT_TEMPLATE.format(

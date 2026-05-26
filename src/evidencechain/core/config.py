@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     app_debug: bool = False
     log_level: str = "INFO"
     database_url: str = "sqlite+aiosqlite:///./storage/evidencechain.db"
+    api_access_token: str = ""
+    api_rate_limit_per_minute: int = 0
     transcript_chunk_max_chars: int = 1200
     transcript_chunk_overlap_segments: int = 1
     transcript_retry_attempts: int = 3
@@ -34,10 +36,13 @@ class Settings(BaseSettings):
     lmstudio_base_url: str = "http://localhost:1234/v1"
     lmstudio_model: str = "local-model"
     search_provider: str = "brave"
+    search_failover_providers: list[str] = Field(default_factory=list)
     brave_search_api_key: str = ""
     brave_search_endpoint: str = "https://api.search.brave.com/res/v1/web/search"
     tavily_api_key: str = ""
+    tavily_search_endpoint: str = "https://api.tavily.com/search"
     bing_search_api_key: str = ""
+    bing_search_endpoint: str = "https://api.bing.microsoft.com/v7.0/search"
     serpapi_api_key: str = ""
     evidence_search_timeout_seconds: float = 15.0
     evidence_search_retry_attempts: int = 3
@@ -49,6 +54,8 @@ class Settings(BaseSettings):
     pipeline_worker_count: int = 1
     pipeline_retry_attempts: int = 3
     pipeline_retry_backoff_seconds: float = 1.0
+    report_export_dir: str = "reports"
+    report_export_retention_days: int = 30
     trusted_source_domains: list[str] = Field(
         default_factory=lambda: [
             "nih.gov",
@@ -86,6 +93,13 @@ class Settings(BaseSettings):
     @field_validator("llm_failover_providers", mode="before")
     @classmethod
     def split_failover_providers(cls, value: str | list[str]) -> list[str]:
+        if isinstance(value, str):
+            return [item.strip().lower() for item in value.split(",") if item.strip()]
+        return [item.lower() for item in value]
+
+    @field_validator("search_failover_providers", mode="before")
+    @classmethod
+    def split_search_failover_providers(cls, value: str | list[str]) -> list[str]:
         if isinstance(value, str):
             return [item.strip().lower() for item in value.split(",") if item.strip()]
         return [item.lower() for item in value]

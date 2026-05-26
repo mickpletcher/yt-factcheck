@@ -167,3 +167,31 @@ export type PipelineInput = {
   language: string;
   title: string;
 };
+
+export type QueuedPipelineStatus =
+  | "queued"
+  | "running"
+  | "succeeded"
+  | "failed"
+  | "retrying"
+  | "canceled";
+
+export type PipelineStageId =
+  | "transcript_ingestion"
+  | "chunking"
+  | "claim_extraction"
+  | "evidence_retrieval"
+  | "scoring"
+  | "report_generation";
+
+export type PipelineJobDetail = {
+  id: number;
+  youtube_url: string;
+  status: QueuedPipelineStatus;
+  progress: number;
+  current_stage: PipelineStageId | null;
+  transcript_id: number | null;
+  claim_ids: number[];
+  report: ReportExport | null;
+  error_message: string | null;
+};

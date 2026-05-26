@@ -25,6 +25,14 @@ Each job runs these stages in order:
 }
 ```
 
+Existing uploaded transcript:
+
+```json
+{
+  "transcript_id": 10
+}
+```
+
 Response:
 
 ```json
@@ -52,6 +60,12 @@ Returns recent pipeline jobs.
 
 Only failed jobs can be retried manually. Automatic retries are controlled by `PIPELINE_RETRY_ATTEMPTS` and `PIPELINE_RETRY_BACKOFF_SECONDS`.
 
+## Cancel Job
+
+`POST /api/v1/pipelines/jobs/{job_id}/cancel`
+
+Queued, running, and retrying jobs can be canceled. Canceled jobs are marked with `status: "canceled"` and are skipped if a worker later dequeues them.
+
 ## Events
 
 `GET /api/v1/pipelines/jobs/{job_id}/events`
@@ -71,3 +85,12 @@ Returns job counts by status, average successful job duration, and average durat
 Returns the active backend, worker count, running state, and queue size.
 
 The current backend is `asyncio`. The queue and worker interface is isolated so a future Celery or Redis backed implementation can enqueue the same job IDs without changing pipeline stage code.
+
+## User-Facing Failures
+
+Pipeline failures are normalized for common public cases:
+
+- Missing captions.
+- Blocked or unavailable captions.
+- Unreadable video metadata.
+- LLM and search provider configuration or runtime errors.

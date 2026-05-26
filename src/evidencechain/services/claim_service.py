@@ -17,6 +17,7 @@ from evidencechain.prompts.claim_extraction import (
 )
 from evidencechain.providers.base import LLMProvider, LLMProviderError, LLMRequest
 from evidencechain.providers.registry import get_llm_provider
+from evidencechain.services.admin_service import AdminService
 from evidencechain.utils.chunking import chunk_transcript
 
 
@@ -37,9 +38,11 @@ class ClaimService:
         self,
         settings: Settings | None = None,
         provider: LLMProvider | None = None,
+        admin_service: AdminService | None = None,
     ) -> None:
         self.settings = settings or get_settings()
         self.provider = provider or get_llm_provider(settings=self.settings)
+        self.admin_service = admin_service or AdminService(self.settings)
 
     async def extract_claims(self, segments: list[TranscriptSegment]) -> list[Claim]:
         chunks = chunk_transcript(
@@ -122,10 +125,36 @@ class ClaimService:
             user_prompt=build_claim_extraction_prompt(chunk),
             temperature=0.0,
         )
+        usage_start = len(getattr(self.provider, "usage", []))
         try:
-            return await self.provider.generate_structured(request, ClaimExtractionProviderOutput)
+            result = await self.provider.generate_structured(request, ClaimExtractionProviderOutput)
         except LLMProviderError as error:
+            await self.admin_service.record_llm_event(
+                self.provider.name,
+                "",
+                0,
+                0,
+                0,
+                0.0,
+                False,
+                str(error),
+            )
             raise ClaimProviderError(str(error)) from error
+        await self._record_usage(usage_start)
+        return result
+
+    async def _record_usage(self, usage_start: int) -> None:
+        usage = getattr(self.provider, "usage", [])
+        for item in usage[usage_start:]:
+            await self.admin_service.record_llm_event(
+                item.provider,
+                item.model,
+                item.prompt_tokens,
+                item.completion_tokens,
+                item.total_tokens,
+                item.cost_usd,
+                True,
+            )
 
     async def _get_transcript_chunks(self, transcript_id: int) -> list[TranscriptChunk]:
         database_path = self.settings.sqlite_path

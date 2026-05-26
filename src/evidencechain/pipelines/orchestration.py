@@ -40,6 +40,10 @@ class PipelineNotFoundError(Exception):
     pass
 
 
+class PipelineCanceledError(Exception):
+    pass
+
+
 class PipelineQueue(Protocol):
     async def enqueue(self, job_id: int) -> None:
         ...
@@ -72,14 +76,19 @@ class PipelineRepository:
     def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or get_settings()
 
-    async def create_job(self, youtube_url: str, max_attempts: int) -> PipelineJobDetail:
+    async def create_job(
+        self,
+        youtube_url: str,
+        max_attempts: int,
+        transcript_id: int | None = None,
+    ) -> PipelineJobDetail:
         async with aiosqlite.connect(self.settings.sqlite_path) as connection:
             cursor = await connection.execute(
                 """
-                INSERT INTO pipeline_jobs (youtube_url, status, max_attempts)
-                VALUES (?, ?, ?)
+                INSERT INTO pipeline_jobs (youtube_url, status, max_attempts, transcript_id)
+                VALUES (?, ?, ?, ?)
                 """,
-                (youtube_url, PipelineJobStatus.queued.value, max_attempts),
+                (youtube_url, PipelineJobStatus.queued.value, max_attempts, transcript_id),
             )
             job_id = cursor.lastrowid
             if job_id is None:
@@ -247,6 +256,30 @@ class PipelineRepository:
             (PipelineJobStatus.failed.value, error, job_id),
         )
         await self.add_event(job_id, None, "job_failed", "Pipeline job failed.", {"error": error})
+
+    async def cancel_job(self, job_id: int) -> None:
+        job = await self.get_job(job_id)
+        if job.status not in {
+            PipelineJobStatus.queued,
+            PipelineJobStatus.running,
+            PipelineJobStatus.retrying,
+        }:
+            raise ValueError("Only queued, running, or retrying jobs can be canceled.")
+        await self._execute(
+            """
+            UPDATE pipeline_jobs
+            SET status = ?, error_message = NULL, current_stage = NULL,
+                completed_at = CURRENT_TIMESTAMP, cancelled_at = CURRENT_TIMESTAMP,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+            """,
+            (PipelineJobStatus.canceled.value, job_id),
+        )
+        await self.add_event(job_id, None, "job_canceled", "Pipeline job canceled.")
+
+    async def is_canceled(self, job_id: int) -> bool:
+        job = await self.get_job(job_id)
+        return job.status == PipelineJobStatus.canceled
 
     async def mark_job_retrying(self, job_id: int, error: str) -> bool:
         job = await self.get_job(job_id)
@@ -556,10 +589,11 @@ class FactCheckOrchestrator:
             PipelineStage.report_generation: self._report_generation,
         }
 
-    async def submit(self, youtube_url: str) -> PipelineJobDetail:
+    async def submit(self, youtube_url: str, transcript_id: int | None = None) -> PipelineJobDetail:
         job = await self.repository.create_job(
             youtube_url=youtube_url,
             max_attempts=self.settings.pipeline_retry_attempts,
+            transcript_id=transcript_id,
         )
         await self.queue.enqueue(job.id)
         self.logger.info(
@@ -571,6 +605,10 @@ class FactCheckOrchestrator:
     async def retry(self, job_id: int) -> PipelineJobDetail:
         await self.repository.reset_failed_job(job_id)
         await self.queue.enqueue(job_id)
+        return await self.repository.get_job(job_id)
+
+    async def cancel(self, job_id: int) -> PipelineJobDetail:
+        await self.repository.cancel_job(job_id)
         return await self.repository.get_job(job_id)
 
     async def start(self) -> None:
@@ -612,16 +650,22 @@ class FactCheckOrchestrator:
                     self.queue.task_done()
 
     async def run_job(self, job_id: int, worker_id: int | None = None) -> PipelineJobDetail:
+        if await self.repository.is_canceled(job_id):
+            return await self.repository.get_job(job_id)
         await self.repository.mark_job_running(job_id)
         self.logger.info("pipeline_job_started", extra={"job_id": job_id, "worker_id": worker_id})
         try:
             for index, stage in enumerate(PIPELINE_STAGES):
+                if await self.repository.is_canceled(job_id):
+                    raise PipelineCanceledError("Pipeline job was canceled.")
                 progress = index / len(PIPELINE_STAGES)
                 await self.repository.update_job_progress(job_id, stage, progress)
                 await self._run_stage(job_id, stage)
             await self.repository.mark_job_succeeded(job_id)
         except Exception as error:
-            message = str(error)
+            if isinstance(error, PipelineCanceledError):
+                return await self.repository.get_job(job_id)
+            message = user_facing_pipeline_error(str(error))
             should_retry = await self.repository.mark_job_retrying(job_id, message)
             if should_retry:
                 delay = self.settings.pipeline_retry_backoff_seconds
@@ -637,6 +681,8 @@ class FactCheckOrchestrator:
         return await self.repository.get_job(job_id)
 
     async def _run_stage(self, job_id: int, stage: PipelineStage) -> None:
+        if await self.repository.is_canceled(job_id):
+            raise PipelineCanceledError("Pipeline job was canceled.")
         job = await self.repository.get_job(job_id)
         attempt = job.retry_count + 1
         await self.repository.start_stage(job_id, stage, attempt)
@@ -720,3 +766,24 @@ class FactCheckOrchestrator:
         if not job.claim_ids:
             raise RuntimeError("Pipeline job has no stored claim ids.")
         return job.claim_ids
+
+
+def user_facing_pipeline_error(message: str) -> str:
+    lowered = message.lower()
+    if "caption" in lowered and any(term in lowered for term in ("missing", "not found", "none")):
+        return (
+            "No usable captions were found for this video. "
+            "Upload a transcript file and run again."
+        )
+    if "caption" in lowered and any(
+        term in lowered for term in ("blocked", "disabled", "unavailable")
+    ):
+        return (
+            "YouTube captions are blocked or unavailable for this video. "
+            "Upload a transcript file instead."
+        )
+    if "metadata" in lowered or "video" in lowered and "not found" in lowered:
+        return "Video metadata could not be read. Check that the URL is public and valid."
+    if "provider" in lowered or "api key" in lowered or "search" in lowered or "llm" in lowered:
+        return f"Provider error. Check configured LLM and search credentials. Details: {message}"
+    return message or "Pipeline failed."

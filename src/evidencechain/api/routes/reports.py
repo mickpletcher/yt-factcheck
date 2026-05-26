@@ -77,3 +77,11 @@ async def export_report(
     except ReportNotFoundError as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
     return {"path": str(path), "format": report_format.value}
+
+
+@router.post("/exports/cleanup", response_model=dict[str, int])
+async def cleanup_report_exports(
+    service: Annotated[ReportService, Depends(get_report_service)],
+    retention_days: int | None = None,
+) -> dict[str, int]:
+    return service.cleanup_exports(retention_days=retention_days)

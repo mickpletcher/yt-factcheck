@@ -2,7 +2,7 @@
 
 Evidence retrieval converts claims into search queries, retrieves web evidence, ranks quality, removes duplicates, stores results, and preserves attribution.
 
-Brave Search is the functional provider for this stage. Tavily, Bing Search, and SerpAPI are present behind the provider abstraction but return configuration errors until their transports are implemented.
+Brave Search, Tavily, and Bing Search are functional providers. SerpAPI is reserved in configuration but still returns a configuration error until its transport is implemented.
 
 ## Retrieve Evidence
 
@@ -102,3 +102,26 @@ https://api.search.brave.com/res/v1/web/search
 ```
 
 with the `X-Subscription-Token` header.
+
+## Tavily Configuration
+
+Set `SEARCH_PROVIDER=tavily` or add `tavily` to `SEARCH_FAILOVER_PROVIDERS`.
+
+Set `TAVILY_API_KEY` in `.env`.
+
+## Bing Configuration
+
+Set `SEARCH_PROVIDER=bing` or add `bing` to `SEARCH_FAILOVER_PROVIDERS`.
+
+Set `BING_SEARCH_API_KEY` in `.env`.
+
+## Search Failover
+
+Set the primary provider with `SEARCH_PROVIDER`.
+
+Set backups with comma separated `SEARCH_FAILOVER_PROVIDERS`, for example:
+
+```env
+SEARCH_PROVIDER=brave
+SEARCH_FAILOVER_PROVIDERS=tavily,bing
+```

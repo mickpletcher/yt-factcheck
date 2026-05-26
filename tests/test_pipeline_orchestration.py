@@ -154,3 +154,14 @@ async def test_pipeline_manual_retry_requires_failed_job(tmp_path: Path) -> None
 
     with pytest.raises(ValueError, match="Only failed"):
         await orchestrator.retry(job.id)
+
+
+async def test_pipeline_job_can_be_canceled_before_running(tmp_path: Path) -> None:
+    orchestrator = await build_orchestrator(tmp_path)
+    job = await orchestrator.submit("https://www.youtube.com/watch?v=abc123")
+
+    canceled = await orchestrator.cancel(job.id)
+    completed = await orchestrator.run_job(job.id)
+
+    assert canceled.status == "canceled"
+    assert completed.status == "canceled"

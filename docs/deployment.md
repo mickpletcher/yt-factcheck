@@ -23,6 +23,7 @@ Required live service secrets depend on the providers you choose:
 - `TAVILY_API_KEY`
 - `BING_SEARCH_API_KEY`
 - `SERPAPI_API_KEY`
+- `API_ACCESS_TOKEN`
 
 For GitHub Actions VPS deployment, configure these repository secrets:
 
@@ -116,8 +117,10 @@ Recommended cloud settings:
 - Set `DATABASE_URL=sqlite+aiosqlite:////data/evidencechain.db`.
 - Set `APP_ENV=production`.
 - Set `APP_DEBUG=false`.
+- Set `API_ACCESS_TOKEN` before public exposure.
+- Set `API_RATE_LIMIT_PER_MINUTE` for shared deployments.
 
-For platforms that support only one public container, expose the web image. Do not expose the API directly unless you add separate authentication and rate limiting.
+For platforms that support only one public container, expose the web image. Keep API access token protection and rate limiting enabled for public or shared deployments.
 
 ## Security Hardening
 

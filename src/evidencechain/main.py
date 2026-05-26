@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from evidencechain.api.middleware import AccessControlMiddleware, RateLimitMiddleware
 from evidencechain.api.router import api_router
 from evidencechain.core.config import Settings, get_settings
 from evidencechain.pipelines.orchestration import FactCheckOrchestrator
@@ -35,6 +36,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.state.settings = resolved_settings
     app.state.pipeline_orchestrator = FactCheckOrchestrator(settings=resolved_settings)
+    app.add_middleware(AccessControlMiddleware, settings=resolved_settings)
+    app.add_middleware(RateLimitMiddleware, settings=resolved_settings)
     app.include_router(api_router, prefix="/api/v1")
 
     return app

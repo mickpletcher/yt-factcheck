@@ -10,7 +10,13 @@ from evidencechain.providers.llm import (
     OpenAIProvider,
     ProviderFactory,
 )
-from evidencechain.providers.search import BraveSearchProvider, UnconfiguredSearchProvider
+from evidencechain.providers.search import (
+    BingSearchProvider,
+    BraveSearchProvider,
+    FailoverSearchProvider,
+    TavilySearchProvider,
+    UnconfiguredSearchProvider,
+)
 
 _LLM_PROVIDER_FACTORIES: dict[str, ProviderFactory] = {
     "openai": OpenAIProvider,
@@ -59,8 +65,22 @@ def get_search_provider(
     settings: Settings | None = None,
 ) -> SearchProvider:
     resolved_settings = settings or get_settings()
-    name = (provider_name or resolved_settings.search_provider).lower()
+    names = _search_provider_names(provider_name, resolved_settings)
+    providers = [_build_search_provider(name, resolved_settings) for name in names]
+    if len(providers) == 1:
+        return providers[0]
+    return FailoverSearchProvider(providers)
 
+
+def _search_provider_names(provider_name: str | None, settings: Settings) -> list[str]:
+    if provider_name:
+        return [item.strip().lower() for item in provider_name.split(",") if item.strip()]
+    names = [settings.search_provider.lower()]
+    names.extend(name for name in settings.search_failover_providers if name not in names)
+    return names
+
+
+def _build_search_provider(name: str, settings: Settings) -> SearchProvider:
     try:
         provider = EvidenceProvider(name)
     except ValueError as error:
@@ -69,5 +89,9 @@ def get_search_provider(
         raise ValueError(message) from error
 
     if provider == EvidenceProvider.brave:
-        return BraveSearchProvider(settings=resolved_settings)
-    return UnconfiguredSearchProvider(provider=provider, settings=resolved_settings)
+        return BraveSearchProvider(settings=settings)
+    if provider == EvidenceProvider.tavily:
+        return TavilySearchProvider(settings=settings)
+    if provider == EvidenceProvider.bing:
+        return BingSearchProvider(settings=settings)
+    return UnconfiguredSearchProvider(provider=provider, settings=settings)

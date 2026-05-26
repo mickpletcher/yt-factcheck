@@ -22,6 +22,7 @@ from evidencechain.models.factcheck import (
 )
 from evidencechain.providers.base import SearchProvider, SearchProviderError
 from evidencechain.providers.registry import get_search_provider
+from evidencechain.services.admin_service import AdminService
 
 
 class EvidenceServiceError(Exception):
@@ -41,9 +42,11 @@ class EvidenceService:
         self,
         settings: Settings | None = None,
         provider: SearchProvider | None = None,
+        admin_service: AdminService | None = None,
     ) -> None:
         self.settings = settings or get_settings()
         self.provider = provider
+        self.admin_service = admin_service or AdminService(self.settings)
 
     async def retrieve_evidence(
         self,
@@ -154,11 +157,23 @@ class EvidenceService:
     ) -> list[SearchResult]:
         cached = await self._get_cached_results(provider.name, query.query)
         if cached is not None:
+            await self.admin_service.record_search_event(provider.name, query.query, True, True)
             return cached
-        results = await provider.search(
-            query.query,
-            count=self.settings.evidence_search_results_per_query,
-        )
+        try:
+            results = await provider.search(
+                query.query,
+                count=self.settings.evidence_search_results_per_query,
+            )
+        except SearchProviderError as error:
+            await self.admin_service.record_search_event(
+                provider.name,
+                query.query,
+                False,
+                False,
+                str(error),
+            )
+            raise
+        await self.admin_service.record_search_event(provider.name, query.query, False, True)
         await self._set_cached_results(provider.name, query.query, results)
         return results
 

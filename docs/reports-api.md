@@ -58,3 +58,16 @@ Response:
 ```
 
 Exports are written under `reports/` by default.
+
+## Cleanup Exported Reports
+
+```http
+POST /api/v1/reports/exports/cleanup?retention_days=30
+```
+
+Deletes generated `transcript-*` export files older than the retention window.
+
+Defaults come from:
+
+- `REPORT_EXPORT_DIR`
+- `REPORT_EXPORT_RETENTION_DAYS`

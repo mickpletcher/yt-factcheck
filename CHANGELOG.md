@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Added API access token protection and simple per-client request rate limiting for public deployments.
+- Added SQLite schema migration tracking and provider usage event storage.
+- Added Tavily and Bing Search transports plus search provider failover.
+- Added provider readiness checks for configured LLM and search capabilities.
+- Added admin provider metrics for calls, token usage, estimated costs, cache hit rate, and failed search queries.
+- Added queued and running pipeline cancellation support.
+- Added user-facing pipeline failure messages for caption, metadata, and provider failure cases.
+- Wired URL-based React dashboard runs to the queued pipeline API with polling and cancellation.
+- Added report export retention cleanup controls.
+- Added frontend ESLint, Vitest, dashboard flow tests, and frontend CI lint/test steps.
 - Added transcript ingestion endpoints for YouTube URL retrieval and upload fallback.
 - Added transcript models, SQLite transcript storage, timestamp preserving parsing, chunking, retry logic, and API docs.
 - Added tests for transcript parsing, storage, chunking, and upload API behavior.

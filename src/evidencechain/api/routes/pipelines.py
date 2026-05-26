@@ -34,7 +34,8 @@ async def queue_factcheck_pipeline(
     request: PipelineRunRequest,
     orchestrator: Annotated[FactCheckOrchestrator, Depends(get_orchestrator)],
 ) -> PipelineRunResponse:
-    job = await orchestrator.submit(str(request.youtube_url))
+    youtube_url = str(request.youtube_url) if request.youtube_url is not None else ""
+    job = await orchestrator.submit(youtube_url, transcript_id=request.transcript_id)
     return PipelineRunResponse(job_id=job.id, status=job.status)
 
 
@@ -75,6 +76,26 @@ async def retry_pipeline_job(
 ) -> PipelineJobDetail:
     try:
         return await orchestrator.retry(job_id)
+    except PipelineNotFoundError as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
+
+
+@router.post(
+    "/jobs/{job_id}/cancel",
+    response_model=PipelineJobDetail,
+    responses={
+        status.HTTP_400_BAD_REQUEST: {"model": PipelineError},
+        status.HTTP_404_NOT_FOUND: {"model": PipelineError},
+    },
+)
+async def cancel_pipeline_job(
+    job_id: int,
+    orchestrator: Annotated[FactCheckOrchestrator, Depends(get_orchestrator)],
+) -> PipelineJobDetail:
+    try:
+        return await orchestrator.cancel(job_id)
     except PipelineNotFoundError as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
     except ValueError as error:

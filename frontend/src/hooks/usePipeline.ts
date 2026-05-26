@@ -1,11 +1,11 @@
-import { useMemo, useReducer } from "react";
+import { useMemo, useReducer, type Dispatch } from "react";
 import {
-  createTranscriptFromUrl,
-  extractClaims,
+  cancelPipelineJob,
+  getPipelineJob,
   getMarkdownReport,
   getReport,
-  retrieveEvidence,
-  scoreClaim,
+  getTranscript,
+  queueFactcheck,
   uploadTranscript
 } from "../api/client";
 import type {
@@ -16,7 +16,9 @@ import type {
   PipelineStepId,
   ReportExport,
   ScoringResult,
-  TranscriptDetail
+  TranscriptDetail,
+  PipelineJobDetail,
+  ReportClaimSummary
 } from "../types";
 
 type PipelineState = {
@@ -30,6 +32,7 @@ type PipelineState = {
   activeClaimId: number | null;
   error: string;
   running: boolean;
+  jobId: number | null;
 };
 
 type Action =
@@ -42,7 +45,8 @@ type Action =
   | { type: "report"; report: ReportExport; markdownReport: string }
   | { type: "activeClaim"; claimId: number | null }
   | { type: "error"; message: string }
-  | { type: "running"; running: boolean };
+  | { type: "running"; running: boolean }
+  | { type: "job"; jobId: number | null };
 
 const initialSteps: PipelineStep[] = [
   { id: "transcript", label: "Transcript", status: "idle", detail: "Waiting for input" },
@@ -62,7 +66,8 @@ const initialState: PipelineState = {
   markdownReport: "",
   activeClaimId: null,
   error: "",
-  running: false
+  running: false,
+  jobId: null
 };
 
 function reducer(state: PipelineState, action: Action): PipelineState {
@@ -104,6 +109,8 @@ function reducer(state: PipelineState, action: Action): PipelineState {
       return { ...state, error: action.message };
     case "running":
       return { ...state, running: action.running };
+    case "job":
+      return { ...state, jobId: action.jobId };
     default:
       return state;
   }
@@ -115,97 +122,105 @@ export function usePipeline() {
   async function run(input: PipelineInput) {
     dispatch({ type: "reset" });
     dispatch({ type: "running", running: true });
-    let currentStep: PipelineStepId = "transcript";
-
     try {
-      currentStep = "transcript";
-      dispatch({ type: "step", step: "transcript", status: "running", detail: "Creating transcript" });
-      const transcript = input.transcriptFile
-        ? await uploadTranscript({
-            file: input.transcriptFile,
-            youtubeUrl: input.youtubeUrl.trim(),
-            title: input.title.trim(),
-            language: input.language.trim() || "en"
-          })
-        : await createTranscriptFromUrl(input.youtubeUrl.trim(), input.language.trim() || "en");
-      dispatch({ type: "transcript", transcript });
-      dispatch({
-        type: "step",
-        step: "transcript",
-        status: "complete",
-        detail: `${transcript.segment_count} segments, ${transcript.chunk_count} chunks`
-      });
-
-      currentStep = "claims";
-      dispatch({ type: "step", step: "claims", status: "running", detail: "Extracting claims" });
-      const claims = await extractClaims(transcript.id);
-      dispatch({ type: "claims", claims });
-      currentStep = "evidence";
-      dispatch({
-        type: "step",
-        step: "claims",
-        status: "complete",
-        detail: `${claims.length} claims extracted`
-      });
-
-      currentStep = "verdicts";
-      dispatch({
-        type: "step",
-        step: "evidence",
-        status: "running",
-        detail: `Retrieving evidence for ${claims.length} claims`
-      });
-      for (const [index, claim] of claims.entries()) {
-        if (claim.id === null) {
-          continue;
-        }
+      if (input.transcriptFile) {
         dispatch({
           type: "step",
-          step: "evidence",
+          step: "transcript",
           status: "running",
-          detail: `Claim ${index + 1} of ${claims.length}`
+          detail: "Uploading transcript"
         });
-        const evidence = await retrieveEvidence(claim.id);
-        dispatch({ type: "evidence", claimId: claim.id, evidence });
-      }
-      dispatch({ type: "step", step: "evidence", status: "complete", detail: "Evidence stored" });
-
-      dispatch({
-        type: "step",
-        step: "verdicts",
-        status: "running",
-        detail: `Scoring ${claims.length} claims`
-      });
-      for (const [index, claim] of claims.entries()) {
-        if (claim.id === null) {
-          continue;
-        }
-        dispatch({
-          type: "step",
-          step: "verdicts",
-          status: "running",
-          detail: `Verdict ${index + 1} of ${claims.length}`
+        const transcript = await uploadTranscript({
+          file: input.transcriptFile,
+          youtubeUrl: input.youtubeUrl.trim(),
+          title: input.title.trim(),
+          language: input.language.trim() || "en"
         });
-        const score = await scoreClaim(claim.id);
-        dispatch({ type: "score", claimId: claim.id, score });
+        dispatch({ type: "transcript", transcript });
+        await runQueued({ transcriptId: transcript.id });
+      } else {
+        await runQueued({ youtubeUrl: input.youtubeUrl.trim() });
       }
-      dispatch({ type: "step", step: "verdicts", status: "complete", detail: "Verdicts scored" });
-
-      currentStep = "report";
-      dispatch({ type: "step", step: "report", status: "running", detail: "Rendering reports" });
-      const [report, markdownReport] = await Promise.all([
-        getReport(transcript.id),
-        getMarkdownReport(transcript.id)
-      ]);
-      dispatch({ type: "report", report, markdownReport });
-      dispatch({ type: "step", step: "report", status: "complete", detail: "Reports ready" });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Pipeline failed";
       dispatch({ type: "error", message });
-      dispatch({ type: "step", step: currentStep, status: "error", detail: message });
+      dispatch({ type: "step", step: "transcript", status: "error", detail: message });
     } finally {
       dispatch({ type: "running", running: false });
     }
+  }
+
+  async function runQueued(input: { youtubeUrl?: string; transcriptId?: number }) {
+    dispatch({ type: "step", step: "transcript", status: "queued", detail: "Queued on backend" });
+    try {
+      const queued = await queueFactcheck(input);
+      dispatch({ type: "job", jobId: queued.job_id });
+      let job = await getPipelineJob(queued.job_id);
+      while (["queued", "running", "retrying"].includes(job.status)) {
+        applyQueuedProgress(job, dispatch);
+        await sleep(1500);
+        job = await getPipelineJob(queued.job_id);
+      }
+      applyQueuedProgress(job, dispatch);
+      if (job.status === "canceled") {
+        throw new Error("Pipeline job was canceled.");
+      }
+      if (job.status !== "succeeded" || job.transcript_id === null) {
+        throw new Error(job.error_message ?? "Pipeline failed");
+      }
+      const [transcript, report, markdownReport] = await Promise.all([
+        getTranscript(job.transcript_id),
+        getReport(job.transcript_id),
+        getMarkdownReport(job.transcript_id)
+      ]);
+      dispatch({ type: "transcript", transcript });
+      dispatch({ type: "claims", claims: report.claims.map(reportClaimToClaim) });
+      dispatch({ type: "report", report, markdownReport });
+      for (const claim of report.claims) {
+        dispatch({
+          type: "evidence",
+          claimId: claim.id,
+          evidence: {
+            run_id: 0,
+            claim_id: claim.id,
+            claim_text: claim.text,
+            provider: "stored",
+            queries: [],
+            evidence: claim.evidence_links.map((link) => ({
+              id: link.id,
+              claim_id: claim.id,
+              provider: "stored",
+              query: "",
+              title: link.title,
+              url: link.url,
+              publisher: link.publisher,
+              snippet: link.snippet,
+              source_type: link.source_type,
+              credibility_score: link.ranking_score,
+              relevance_score: link.ranking_score,
+              quality_score: link.ranking_score,
+              ranking_score: link.ranking_score,
+              attribution: link.attribution,
+              retrieved_at: link.retrieved_at
+            }))
+          }
+        });
+        dispatch({ type: "score", claimId: claim.id, score: reportClaimToScore(claim) });
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Pipeline failed";
+      dispatch({ type: "error", message });
+      dispatch({ type: "step", step: "transcript", status: "error", detail: message });
+    }
+  }
+
+  async function cancel() {
+    if (state.jobId === null) {
+      return;
+    }
+    await cancelPipelineJob(state.jobId);
+    dispatch({ type: "running", running: false });
+    dispatch({ type: "error", message: "Pipeline job was canceled." });
   }
 
   const activeClaim = useMemo(
@@ -217,6 +232,94 @@ export function usePipeline() {
     state,
     activeClaim,
     run,
+    cancel,
     setActiveClaim: (claimId: number | null) => dispatch({ type: "activeClaim", claimId })
   };
+}
+
+function applyQueuedProgress(job: PipelineJobDetail, dispatch: Dispatch<Action>) {
+  const stageMap: Record<string, PipelineStepId> = {
+    transcript_ingestion: "transcript",
+    chunking: "transcript",
+    claim_extraction: "claims",
+    evidence_retrieval: "evidence",
+    scoring: "verdicts",
+    report_generation: "report"
+  };
+  const activeStep = job.current_stage ? stageMap[job.current_stage] : null;
+  const completed = completedSteps(activeStep, job.status);
+  initialSteps.forEach((step) => {
+    if (completed.includes(step.id)) {
+      dispatch({ type: "step", step: step.id, status: "complete", detail: "Completed on backend" });
+    } else if (step.id === activeStep) {
+      dispatch({ type: "step", step: step.id, status: "running", detail: job.status });
+    }
+  });
+}
+
+function completedSteps(activeStep: PipelineStepId | null, status: PipelineJobDetail["status"]) {
+  if (status === "succeeded") {
+    return initialSteps.map((step) => step.id);
+  }
+  if (activeStep === null) {
+    return [];
+  }
+  const activeIndex = initialSteps.findIndex((step) => step.id === activeStep);
+  return initialSteps.slice(0, activeIndex).map((step) => step.id);
+}
+
+function reportClaimToClaim(claim: ReportClaimSummary): Claim {
+  return {
+    id: claim.id,
+    transcript_id: null,
+    chunk_position: 0,
+    text: claim.text,
+    category: claim.category,
+    confidence: claim.claim_confidence,
+    start_seconds: claim.timestamp_seconds,
+    end_seconds: claim.timestamp_seconds,
+    source_text: claim.text,
+    created_at: null
+  };
+}
+
+function reportClaimToScore(claim: ReportClaimSummary): ScoringResult {
+  const convertedClaim = reportClaimToClaim(claim);
+  return {
+    id: null,
+    claim: convertedClaim,
+    verdict: claim.verdict,
+    confidence: claim.verdict_confidence,
+    explanation: claim.explanation,
+    evidence: claim.evidence_links.map((link) => ({
+      id: link.id,
+      claim_id: claim.id,
+      provider: "stored",
+      query: "",
+      title: link.title,
+      url: link.url,
+      publisher: link.publisher,
+      snippet: link.snippet,
+      source_type: link.source_type,
+      credibility_score: link.ranking_score,
+      relevance_score: link.ranking_score,
+      quality_score: link.ranking_score,
+      ranking_score: link.ranking_score,
+      attribution: link.attribution,
+      retrieved_at: link.retrieved_at
+    })),
+    comparisons: [],
+    cited_evidence_ids: claim.citations.map((link) => link.id),
+    safeguards: {
+      stored_evidence_only: true,
+      has_sufficient_evidence: claim.evidence_links.length > 0,
+      citation_validation_passed: true,
+      blocked_reasons: []
+    },
+    created_at: null
+  };
+}
+
+function sleep(milliseconds: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 }

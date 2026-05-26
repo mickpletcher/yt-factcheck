@@ -1,4 +1,6 @@
+import os
 from pathlib import Path
+from time import time
 
 from httpx import ASGITransport, AsyncClient
 
@@ -133,3 +135,26 @@ async def test_report_html_and_markdown_render_public_outputs(tmp_path: Path) ->
     assert "# Medical Trial Review" in markdown
     assert "Evidence:" in markdown
     assert exported.exists()
+
+
+async def test_report_export_cleanup_removes_expired_files(tmp_path: Path) -> None:
+    settings = Settings(
+        database_url=f"sqlite+aiosqlite:///{tmp_path / 'cleanup.db'}",
+        report_export_dir=str(tmp_path),
+        report_export_retention_days=1,
+    )
+    service = ReportService(settings=settings)
+    expired = tmp_path / "transcript-1.json"
+    fresh = tmp_path / "transcript-2.json"
+    expired.write_text("{}", encoding="utf-8")
+    fresh.write_text("{}", encoding="utf-8")
+    old_time = time() - 3 * 86400
+    expired.touch()
+    fresh.touch()
+    os.utime(expired, (old_time, old_time))
+
+    result = service.cleanup_exports()
+
+    assert result == {"deleted": 1, "kept": 1}
+    assert not expired.exists()
+    assert fresh.exists()

@@ -1,4 +1,4 @@
-import { Activity, FileText, Moon, Play, Search, Upload, Youtube } from "lucide-react";
+import { Activity, FileText, Moon, Play, Search, Square, Upload, Youtube } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
 import { htmlReportUrl } from "./api/client";
 import { ClaimList } from "./components/ClaimList";
@@ -11,7 +11,7 @@ import { usePipeline } from "./hooks/usePipeline";
 import type { PipelineInput } from "./types";
 
 export function App() {
-  const { state, activeClaim, run, setActiveClaim } = usePipeline();
+  const { state, activeClaim, run, cancel, setActiveClaim } = usePipeline();
   const [input, setInput] = useState<PipelineInput>({
     youtubeUrl: "",
     transcriptFile: null,
@@ -134,6 +134,12 @@ export function App() {
               <Play size={18} />
               {state.running ? "Running pipeline" : "Run fact check"}
             </button>
+            {state.running && state.jobId !== null ? (
+              <button className="secondary-button" type="button" onClick={cancel}>
+                <Square size={18} />
+                Cancel job
+              </button>
+            ) : null}
             {state.error ? <div className="error-box">{state.error}</div> : null}
           </form>
 

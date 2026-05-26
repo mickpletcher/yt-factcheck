@@ -2,6 +2,8 @@ from pathlib import Path
 
 from evidencechain.core.config import Settings
 from evidencechain.models.factcheck import Claim, EvidenceProvider, SearchResult
+from evidencechain.providers.base import SearchProviderError
+from evidencechain.providers.search import FailoverSearchProvider
 from evidencechain.services.evidence_service import EvidenceService
 from evidencechain.storage.database import initialize_database
 
@@ -39,6 +41,29 @@ class FakeSearchProvider:
                 provider=EvidenceProvider.brave,
                 query=query,
             ),
+        ]
+
+
+class FailingSearchProvider:
+    name = "brave"
+
+    async def search(self, query: str, count: int) -> list[SearchResult]:
+        raise SearchProviderError("temporary failure")
+
+
+class BackupSearchProvider:
+    name = "tavily"
+
+    async def search(self, query: str, count: int) -> list[SearchResult]:
+        return [
+            SearchResult(
+                title="Backup result",
+                url="https://www.nih.gov/backup",
+                snippet="Backup evidence result.",
+                publisher="NIH",
+                provider=EvidenceProvider.tavily,
+                query=query,
+            )
         ]
 
 
@@ -88,3 +113,12 @@ async def test_search_results_are_cached_by_provider_and_query(tmp_path: Path) -
 
     assert first_call_count == settings.evidence_search_max_queries
     assert provider.calls == first_call_count
+
+
+async def test_search_failover_uses_backup_provider() -> None:
+    provider = FailoverSearchProvider([FailingSearchProvider(), BackupSearchProvider()])
+
+    results = await provider.search("medicine trial", 5)
+
+    assert len(results) == 1
+    assert results[0].provider == EvidenceProvider.tavily

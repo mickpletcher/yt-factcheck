@@ -212,6 +212,7 @@ input:focus {
 }
 
 .primary-button,
+.secondary-button,
 .tabs button {
   display: inline-flex;
   justify-content: center;
@@ -232,6 +233,14 @@ input:focus {
 .primary-button:disabled {
   cursor: not-allowed;
   opacity: 0.52;
+}
+
+.secondary-button {
+  width: 100%;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid #3b4652;
+  font-weight: 700;
 }
 
 .error-box {

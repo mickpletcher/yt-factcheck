@@ -1,6 +1,7 @@
 import type {
   Claim,
   EvidenceRetrievalResult,
+  PipelineJobDetail,
   ReportExport,
   ScoringResult,
   TranscriptDetail
@@ -90,4 +91,32 @@ export async function getMarkdownReport(transcriptId: number): Promise<string> {
 
 export function htmlReportUrl(transcriptId: number): string {
   return `${API_BASE}/api/v1/reports/transcripts/${transcriptId}.html`;
+}
+
+export async function queueFactcheck(input: {
+  youtubeUrl?: string;
+  transcriptId?: number;
+}): Promise<{ job_id: number; status: string }> {
+  return request<{ job_id: number; status: string }>("/api/v1/pipelines/factcheck", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      youtube_url: input.youtubeUrl,
+      transcript_id: input.transcriptId
+    })
+  });
+}
+
+export async function getPipelineJob(jobId: number): Promise<PipelineJobDetail> {
+  return request<PipelineJobDetail>(`/api/v1/pipelines/jobs/${jobId}`);
+}
+
+export async function cancelPipelineJob(jobId: number): Promise<PipelineJobDetail> {
+  return request<PipelineJobDetail>(`/api/v1/pipelines/jobs/${jobId}/cancel`, {
+    method: "POST"
+  });
+}
+
+export async function getTranscript(transcriptId: number): Promise<TranscriptDetail> {
+  return request<TranscriptDetail>(`/api/v1/transcripts/${transcriptId}`);
 }

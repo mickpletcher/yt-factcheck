@@ -2,6 +2,8 @@ import aiosqlite
 
 from evidencechain.core.config import Settings
 
+SCHEMA_VERSION = 2
+
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS factcheck_runs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -217,6 +219,36 @@ CREATE INDEX IF NOT EXISTS idx_pipeline_events_job_id
 ON pipeline_events(job_id);
 """
 
+MIGRATIONS: dict[int, str] = {
+    1: """
+    ALTER TABLE pipeline_jobs
+    ADD COLUMN cancelled_at TEXT;
+    """,
+    2: """
+    CREATE TABLE IF NOT EXISTS provider_usage_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        provider_type TEXT NOT NULL,
+        provider TEXT NOT NULL,
+        model TEXT NOT NULL DEFAULT '',
+        prompt_tokens INTEGER NOT NULL DEFAULT 0,
+        completion_tokens INTEGER NOT NULL DEFAULT 0,
+        total_tokens INTEGER NOT NULL DEFAULT 0,
+        cost_usd REAL NOT NULL DEFAULT 0,
+        cache_hit INTEGER NOT NULL DEFAULT 0,
+        search_query TEXT NOT NULL DEFAULT '',
+        success INTEGER NOT NULL DEFAULT 1,
+        error_message TEXT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_provider_usage_events_type_provider
+    ON provider_usage_events(provider_type, provider);
+
+    CREATE INDEX IF NOT EXISTS idx_provider_usage_events_created_at
+    ON provider_usage_events(created_at);
+    """,
+}
+
 
 async def initialize_database(settings: Settings) -> None:
     database_path = settings.sqlite_path
@@ -225,4 +257,25 @@ async def initialize_database(settings: Settings) -> None:
     async with aiosqlite.connect(database_path) as connection:
         await connection.execute("PRAGMA foreign_keys = ON")
         await connection.executescript(SCHEMA)
+        await apply_migrations(connection)
         await connection.commit()
+
+
+async def apply_migrations(connection: aiosqlite.Connection) -> None:
+    await connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS schema_migrations (
+            version INTEGER PRIMARY KEY,
+            applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+    cursor = await connection.execute("SELECT MAX(version) FROM schema_migrations")
+    row = await cursor.fetchone()
+    current_version = int(row[0] or 0) if row else 0
+    for version in range(current_version + 1, SCHEMA_VERSION + 1):
+        await connection.executescript(MIGRATIONS[version])
+        await connection.execute(
+            "INSERT INTO schema_migrations (version) VALUES (?)",
+            (version,),
+        )

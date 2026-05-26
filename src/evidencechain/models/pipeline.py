@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Any
 
-from pydantic import BaseModel, Field, HttpUrl, field_validator
+from pydantic import BaseModel, Field, HttpUrl, field_validator, model_validator
 
 
 class PipelineStage(StrEnum):
@@ -20,6 +20,7 @@ class PipelineJobStatus(StrEnum):
     succeeded = "succeeded"
     failed = "failed"
     retrying = "retrying"
+    canceled = "canceled"
 
 
 class PipelineStageStatus(StrEnum):
@@ -30,7 +31,14 @@ class PipelineStageStatus(StrEnum):
 
 
 class PipelineRunRequest(BaseModel):
-    youtube_url: HttpUrl
+    youtube_url: HttpUrl | None = None
+    transcript_id: int | None = Field(default=None, gt=0)
+
+    @model_validator(mode="after")
+    def require_url_or_transcript(self) -> "PipelineRunRequest":
+        if self.youtube_url is None and self.transcript_id is None:
+            raise ValueError("youtube_url or transcript_id is required")
+        return self
 
 
 class PipelineRunResponse(BaseModel):

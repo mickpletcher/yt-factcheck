@@ -31,7 +31,7 @@ Working now:
 - Transcript upload fallback
 - Claim extraction
 - LLM providers for OpenAI, Anthropic, Ollama, and LM Studio
-- Brave Search evidence retrieval
+- Brave, Tavily, and Bing Search evidence retrieval
 - Evidence scoring
 - Report generation
 - Full pipeline queue API
@@ -41,7 +41,7 @@ Working now:
 
 Important limitation:
 
-Brave Search is the only working live search provider right now. Tavily, Bing Search, and SerpAPI are reserved in configuration, but not implemented yet.
+SerpAPI is reserved in configuration, but not implemented yet.
 
 ## Requirements
 
@@ -337,6 +337,8 @@ The API is under `/api/v1`.
 | --- | --- | --- |
 | `GET` | `/api/v1/health` | Service health check |
 | `GET` | `/api/v1/health/providers` | LLM provider health checks |
+| `GET` | `/api/v1/health/readiness` | LLM and search readiness checks |
+| `GET` | `/api/v1/admin/providers` | Provider cost, token, cache, and failure metrics |
 | `POST` | `/api/v1/transcripts/from-url` | Create a transcript from a YouTube URL |
 | `POST` | `/api/v1/transcripts/upload` | Upload a transcript file |
 | `GET` | `/api/v1/transcripts/{transcript_id}` | Get transcript details |
@@ -348,10 +350,12 @@ The API is under `/api/v1`.
 | `GET` | `/api/v1/reports/transcripts/{transcript_id}` | Get JSON report |
 | `GET` | `/api/v1/reports/transcripts/{transcript_id}.html` | Get HTML report |
 | `GET` | `/api/v1/reports/transcripts/{transcript_id}.md` | Get Markdown report |
+| `POST` | `/api/v1/reports/exports/cleanup` | Delete expired report exports |
 | `POST` | `/api/v1/pipelines/factcheck` | Queue a full fact-check job |
 | `GET` | `/api/v1/pipelines/jobs` | List recent jobs |
 | `GET` | `/api/v1/pipelines/jobs/{job_id}` | Get job progress |
 | `POST` | `/api/v1/pipelines/jobs/{job_id}/retry` | Retry a failed job |
+| `POST` | `/api/v1/pipelines/jobs/{job_id}/cancel` | Cancel a queued or running job |
 | `GET` | `/api/v1/pipelines/jobs/{job_id}/events` | Get job events |
 | `GET` | `/api/v1/pipelines/metrics` | Get pipeline metrics |
 | `GET` | `/api/v1/pipelines/workers` | Get worker health |
@@ -376,9 +380,14 @@ Most users only need these at first:
 | `LLM_PROVIDER` | Which LLM provider to use: `openai`, `anthropic`, `ollama`, or `lmstudio` |
 | `OPENAI_API_KEY` | OpenAI API key, if using OpenAI |
 | `ANTHROPIC_API_KEY` | Anthropic API key, if using Anthropic |
-| `BRAVE_SEARCH_API_KEY` | Brave Search API key for live evidence retrieval |
+| `BRAVE_SEARCH_API_KEY` | Brave Search API key, if using Brave |
+| `TAVILY_API_KEY` | Tavily API key, if using Tavily |
+| `BING_SEARCH_API_KEY` | Bing Search API key, if using Bing |
 | `DATABASE_URL` | SQLite database location |
-| `SEARCH_PROVIDER` | Search provider. Use `brave` for now |
+| `SEARCH_PROVIDER` | Primary search provider: `brave`, `tavily`, or `bing` |
+| `SEARCH_FAILOVER_PROVIDERS` | Optional comma separated backup search providers |
+| `API_ACCESS_TOKEN` | Optional API token required through `x-api-key` or bearer auth |
+| `API_RATE_LIMIT_PER_MINUTE` | Optional per-client API request limit |
 
 Advanced settings are already documented in `.env.example`.
 
@@ -463,7 +472,7 @@ You need:
 
 - A configured LLM provider.
 - A valid API key for that provider, unless using a local model.
-- `BRAVE_SEARCH_API_KEY` for live evidence retrieval.
+- A configured search provider key for Brave, Tavily, or Bing.
 
 ### YouTube transcript fails
 

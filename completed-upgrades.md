@@ -6,6 +6,43 @@ When a planned upgrade is finished, move it from `future-upgrades.md` to this fi
 
 ## Completed
 
+### 2026-05-26: Public readiness and queued dashboard hardening
+
+Summary:
+
+- Added API access token enforcement and per-client request rate limiting.
+- Added SQLite schema migration tracking and provider usage event storage.
+- Added Tavily and Bing Search providers plus search failover.
+- Added provider readiness and admin provider metrics endpoints.
+- Wired URL-based React dashboard runs to the queued pipeline API with polling and cancellation.
+- Added clearer pipeline failure messages for caption, metadata, and provider failures.
+- Added queued and running pipeline job cancellation.
+- Added report export cleanup controls.
+- Added frontend linting and dashboard flow tests.
+
+Touched areas:
+
+- `src/evidencechain/api/`
+- `src/evidencechain/core/config.py`
+- `src/evidencechain/providers/`
+- `src/evidencechain/services/`
+- `src/evidencechain/pipelines/orchestration.py`
+- `src/evidencechain/storage/database.py`
+- `frontend/`
+- `.github/workflows/ci.yml`
+- `.env*.example`
+- `docs/`
+- `tests/`
+
+Validation:
+
+- `.\\.venv\\Scripts\\python.exe -m ruff check .`
+- `.\\.venv\\Scripts\\python.exe -m mypy src`
+- `.\\.venv\\Scripts\\python.exe -m pytest -q`
+- `npm run lint` from `frontend`
+- `npm test` from `frontend`
+- `npm run build` from `frontend`
+
 ### 2026-05-25: Frontend CI validation
 
 Summary:
