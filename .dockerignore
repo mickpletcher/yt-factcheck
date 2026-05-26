@@ -4,9 +4,17 @@
 .pytest_cache
 .ruff_cache
 .venv
+frontend/node_modules
+frontend/dist
+frontend/*.tsbuildinfo
 __pycache__
 *.pyc
 .env
+.env.*
+!.env.example
+!.env.local.example
+!.env.production.example
 storage/*.db
+storage/*.db-*
 reports/*
 !reports/.gitkeep

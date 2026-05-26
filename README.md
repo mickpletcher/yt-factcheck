@@ -35,6 +35,10 @@ Claim extraction runs through a pluggable LLM provider layer with OpenAI, Anthro
 ```text
 .
 ├── .github/workflows/ci.yml
+├── .github/workflows/deploy.yml
+├── docker-compose.yml
+├── nginx/
+├── scripts/
 ├── reports/
 ├── frontend/
 ├── storage/
@@ -119,17 +123,32 @@ npm run build
 
 ## Docker
 
-Build:
+Local Docker deployment:
 
 ```powershell
-docker build -t evidencechain .
+Copy-Item .env.local.example .env
+.\scripts\start-local.ps1
 ```
 
-Run:
+Open `http://127.0.0.1:8080`.
+
+Health checks:
 
 ```powershell
-docker run --rm -p 8000:8000 --env-file .env evidencechain
+Invoke-RestMethod http://127.0.0.1:8080/healthz
+Invoke-RestMethod http://127.0.0.1:8080/api/v1/health
 ```
+
+The production container stack includes:
+
+- FastAPI served by Gunicorn with Uvicorn workers
+- Nginx reverse proxy and static frontend server
+- Docker Compose orchestration
+- Named volumes for SQLite data and exported reports
+- Container health checks
+- Non-root runtime users and restricted container capabilities
+
+Detailed local, VPS, and cloud deployment instructions are in `docs/deployment.md`.
 
 ## Configuration
 

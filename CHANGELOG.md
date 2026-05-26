@@ -10,6 +10,10 @@
 - Added the verdict scoring engine with stored evidence comparison, citation validation, hallucination safeguards, scoring API endpoints, docs, and tests.
 - Added the reporting engine with JSON, HTML, Markdown, disk exports, public report templates, report API endpoints, docs, and tests.
 - Added asyncio pipeline orchestration with persistent queue state, worker lifecycle, retries, failure recovery, progress tracking, structured events, metrics, API endpoints, docs, and tests.
+- Added production Docker targets for the FastAPI API and Nginx web frontend.
+- Added Docker Compose deployment with health checks, named volumes, and container hardening.
+- Added local and production environment templates, startup scripts, VPS deployment support, and deployment documentation.
+- Added GitHub Actions image build, GHCR push, and optional VPS deployment workflow.
 
 ## 2026-05-25
 
