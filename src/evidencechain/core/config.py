@@ -11,6 +11,11 @@ class Settings(BaseSettings):
     app_debug: bool = False
     log_level: str = "INFO"
     database_url: str = "sqlite+aiosqlite:///./storage/evidencechain.db"
+    transcript_chunk_max_chars: int = 1200
+    transcript_chunk_overlap_segments: int = 1
+    transcript_retry_attempts: int = 3
+    transcript_retry_backoff_seconds: float = 0.5
+    transcript_fetch_timeout_seconds: float = 20.0
     trusted_source_domains: list[str] = Field(
         default_factory=lambda: ["nih.gov", "cdc.gov", "who.int", "edu", "gov"]
     )

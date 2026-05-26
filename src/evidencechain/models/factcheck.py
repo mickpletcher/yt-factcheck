@@ -3,18 +3,14 @@ from enum import StrEnum
 
 from pydantic import BaseModel, Field, HttpUrl
 
+from evidencechain.models.transcript import TranscriptSegment
+
 
 class ClaimStatus(StrEnum):
     pending = "pending"
     supported = "supported"
     contradicted = "contradicted"
     inconclusive = "inconclusive"
-
-
-class TranscriptSegment(BaseModel):
-    start_seconds: float = Field(ge=0)
-    end_seconds: float = Field(ge=0)
-    text: str
 
 
 class Claim(BaseModel):

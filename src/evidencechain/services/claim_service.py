@@ -1,4 +1,5 @@
-from evidencechain.models.factcheck import Claim, TranscriptSegment
+from evidencechain.models.factcheck import Claim
+from evidencechain.models.transcript import TranscriptSegment
 
 
 class ClaimService:

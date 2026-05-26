@@ -10,7 +10,7 @@ The intended workflow is:
 4. Compare evidence against each claim.
 5. Generate a timestamped verification report with citations.
 
-AI logic is not implemented yet. This repository currently focuses on the production project structure, service boundaries, configuration, logging, database startup, tests, Docker, and CI.
+Claim extraction is not implemented yet. This repository currently supports transcript ingestion, transcript storage, transcript chunking, service boundaries, configuration, logging, database startup, tests, Docker, and CI.
 
 ## Stack
 
@@ -113,6 +113,11 @@ See `.env.example` for supported settings.
 | `LOG_LEVEL` | Python logging level |
 | `DATABASE_URL` | SQLite database URL |
 | `TRUSTED_SOURCE_DOMAINS` | Comma separated trusted evidence domains |
+| `TRANSCRIPT_CHUNK_MAX_CHARS` | Maximum transcript characters per chunk |
+| `TRANSCRIPT_CHUNK_OVERLAP_SEGMENTS` | Number of transcript segments repeated between chunks |
+| `TRANSCRIPT_RETRY_ATTEMPTS` | Retry attempts for YouTube metadata and caption fetches |
+| `TRANSCRIPT_RETRY_BACKOFF_SECONDS` | Base retry backoff in seconds |
+| `TRANSCRIPT_FETCH_TIMEOUT_SECONDS` | HTTP timeout for caption download |
 
 Only `sqlite+aiosqlite` database URLs are supported initially.
 
@@ -121,9 +126,15 @@ Only `sqlite+aiosqlite` database URLs are supported initially.
 | Method | Path | Purpose |
 | --- | --- | --- |
 | `GET` | `/api/v1/health` | Service health check |
+| `POST` | `/api/v1/transcripts/from-url` | Create a stored transcript from a YouTube URL |
+| `POST` | `/api/v1/transcripts/upload` | Upload a `.txt`, `.srt`, `.vtt`, or JSON transcript fallback |
+| `GET` | `/api/v1/transcripts/{transcript_id}` | Return stored transcript metadata, segments, and chunks |
+| `GET` | `/api/v1/transcripts/{transcript_id}/chunks` | Return stored chunks for a transcript |
 
 ## Development Notes
 
-The service classes in `src/evidencechain/services/` are placeholders by design. They define the future boundaries for transcript extraction, claim extraction, evidence retrieval, and verification.
+Transcript ingestion is implemented in `src/evidencechain/services/transcript_service.py`. It extracts YouTube metadata through `yt-dlp`, retrieves captions when available, normalizes uploaded fallback transcript files, preserves timestamps when present, stores transcript records in SQLite, and creates timestamped chunks.
 
-The pipeline in `src/evidencechain/pipelines/factcheck_pipeline.py` shows the intended orchestration flow without implementing AI behavior yet.
+The pipeline in `src/evidencechain/pipelines/factcheck_pipeline.py` still stops before claim extraction because claim extraction is intentionally out of scope for the transcript ingestion phase.
+
+Detailed transcript API docs are in `docs/transcripts-api.md`.
