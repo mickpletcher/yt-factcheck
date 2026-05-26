@@ -156,6 +156,10 @@ Only `sqlite+aiosqlite` database URLs are supported initially.
 | `POST` | `/api/v1/scoring/score` | Score a stored claim using stored evidence |
 | `POST` | `/api/v1/scoring/claims/{claim_id}` | Score a stored claim by path id |
 | `GET` | `/api/v1/scoring/claims/{claim_id}` | Return stored scoring results for a claim |
+| `GET` | `/api/v1/reports/transcripts/{transcript_id}` | Return a structured JSON report |
+| `GET` | `/api/v1/reports/transcripts/{transcript_id}.html` | Return a public HTML report |
+| `GET` | `/api/v1/reports/transcripts/{transcript_id}.md` | Return a Markdown report |
+| `POST` | `/api/v1/reports/transcripts/{transcript_id}/exports/{report_format}` | Export a report to disk |
 
 ## Development Notes
 
@@ -167,4 +171,6 @@ Evidence retrieval is implemented in `src/evidencechain/services/evidence_servic
 
 Verdict scoring is implemented in `src/evidencechain/services/scoring_service.py`. It compares stored evidence snippets against stored claims, assigns support or contradiction relationships, validates cited evidence IDs, blocks fabricated citations, and returns `Unverified` when evidence is insufficient.
 
-Detailed API docs are in `docs/transcripts-api.md`, `docs/claims-api.md`, `docs/evidence-api.md`, and `docs/scoring-api.md`.
+Report rendering is implemented in `src/evidencechain/services/report_service.py`. It builds one JSON report object, then renders HTML, Markdown, or JSON exports with video metadata, verdict summaries, confidence indicators, citations, and linked evidence.
+
+Detailed API docs are in `docs/transcripts-api.md`, `docs/claims-api.md`, `docs/evidence-api.md`, `docs/scoring-api.md`, and `docs/reports-api.md`.
