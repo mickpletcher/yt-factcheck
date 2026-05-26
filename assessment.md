@@ -17,7 +17,7 @@ Validated from the project virtual environment and frontend workspace:
 | Backend tests | `.\\.venv\\Scripts\\python.exe -m pytest -q` | Passed, 28 tests |
 | Backend lint | `.\\.venv\\Scripts\\python.exe -m ruff check .` | Passed |
 | Backend typing | `.\\.venv\\Scripts\\python.exe -m mypy src` | Passed, 46 source files |
-| Frontend build | `npm run build` from `frontend` | Passed |
+| Frontend build | `npm run build` from `frontend` | Passed and now covered by CI |
 
 Note: running `python -m pytest` with the Windows Store Python 3.11 failed because dependencies such as `aiosqlite` were not installed there. The repo targets Python 3.12 and the local `.venv` is the correct environment.
 
@@ -233,10 +233,7 @@ Quality tools:
 - `mypy` in strict mode
 - Frontend TypeScript build
 - GitHub Actions CI for Python checks
-
-Gap:
-
-The CI workflow does not currently build the frontend. The frontend build passes locally, but CI only runs Python lint, type checks, and tests.
+- GitHub Actions CI for frontend dependency install and build
 
 ## Documentation
 
@@ -296,15 +293,7 @@ Recommended fix:
 
 Add an optional LLM assisted evidence comparison stage with strict citation constraints, then keep the current heuristic scorer as a fallback or guardrail.
 
-### 4. Frontend is not in CI
-
-The frontend build passes locally but is not part of the CI workflow.
-
-Recommended fix:
-
-Add a CI job for `frontend`: `npm ci` and `npm run build`.
-
-### 5. Runtime depends on external services
+### 4. Runtime depends on external services
 
 Real fact-check runs need at least one configured LLM provider and Brave Search key. Without those, only mocked or partial workflows work.
 
@@ -312,7 +301,7 @@ Recommended fix:
 
 Add a startup diagnostics command or endpoint that reports which workflow capabilities are actually configured.
 
-### 6. In-process pipeline limits scaling
+### 5. In-process pipeline limits scaling
 
 The current queue is fine for local and single VPS use. It is not a durable distributed queue.
 
@@ -320,7 +309,7 @@ Recommended fix:
 
 Keep the current queue for MVP. Move to Redis, Postgres advisory locks, or another external queue only when multi-worker deployment becomes necessary.
 
-### 7. YouTube transcript availability will vary
+### 6. YouTube transcript availability will vary
 
 Some videos have no captions, blocked captions, bad metadata, or anti-bot friction.
 
@@ -332,16 +321,15 @@ Keep uploaded transcript fallback prominent. Add clearer user-facing failure mes
 
 Priority order:
 
-1. Add frontend CI.
-2. Add a database migration path.
-3. Implement one more evidence search provider.
-4. Add a provider readiness endpoint or CLI diagnostic.
-5. Improve user-facing pipeline failure messages.
-6. Add cancellation support for queued and running jobs.
-7. Add report export cleanup or retention controls.
-8. Add integration tests for Docker Compose health checks.
-9. Add authenticated access before exposing this publicly.
-10. Add rate limiting if deployed beyond personal use.
+1. Add a database migration path.
+2. Implement one more evidence search provider.
+3. Add a provider readiness endpoint or CLI diagnostic.
+4. Improve user-facing pipeline failure messages.
+5. Add cancellation support for queued and running jobs.
+6. Add report export cleanup or retention controls.
+7. Add integration tests for Docker Compose health checks.
+8. Add authenticated access before exposing this publicly.
+9. Add rate limiting if deployed beyond personal use.
 
 ## Bottom Line
 

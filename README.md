@@ -121,6 +121,18 @@ cd frontend
 npm run build
 ```
 
+## Spec Workflow
+
+Non-trivial changes should use the numbered spec workflow under `specs/`.
+
+Current spec packages:
+
+| Spec | Purpose | Status |
+| --- | --- | --- |
+| `specs/001-frontend-ci` | Add frontend dependency install and build validation to CI | Implemented |
+
+Reusable Copilot prompts live in `.github/prompts/`. Repo-specific Copilot guidance lives in `.github/copilot-instructions.md`.
+
 ## Docker
 
 Local Docker deployment:

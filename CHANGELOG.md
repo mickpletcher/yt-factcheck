@@ -14,6 +14,8 @@
 - Added Docker Compose deployment with health checks, named volumes, and container hardening.
 - Added local and production environment templates, startup scripts, VPS deployment support, and deployment documentation.
 - Added GitHub Actions image build, GHCR push, and optional VPS deployment workflow.
+- Added GitHub Copilot spec workflow files and the first numbered spec for frontend CI.
+- Added frontend `npm ci` and `npm run build` validation to CI.
 
 ## 2026-05-25
 
