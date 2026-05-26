@@ -11,7 +11,7 @@ The intended workflow is:
 5. Score an explainable verdict with stored evidence citations.
 6. Generate a timestamped verification report with citations.
 
-Claim extraction is implemented behind a minimal pluggable LLM provider interface. Evidence retrieval is implemented behind a swappable search provider interface. Brave Search is functional now. Tavily, Bing Search, and SerpAPI are wired as optional provider slots but are not implemented yet.
+Claim extraction runs through a pluggable LLM provider layer with OpenAI, Anthropic, Ollama, LM Studio, failover, health checks, token usage, and cost tracking. Evidence retrieval is implemented behind a swappable search provider interface. Brave Search is functional now. Tavily, Bing Search, and SerpAPI are wired as optional provider slots but are not implemented yet.
 
 ## Stack
 
@@ -150,10 +150,23 @@ See `.env.example` for supported settings.
 | `TRANSCRIPT_RETRY_ATTEMPTS` | Retry attempts for YouTube metadata and caption fetches |
 | `TRANSCRIPT_RETRY_BACKOFF_SECONDS` | Base retry backoff in seconds |
 | `TRANSCRIPT_FETCH_TIMEOUT_SECONDS` | HTTP timeout for caption download |
-| `LLM_PROVIDER` | Default claim extraction provider name: `openai`, `anthropic`, or `ollama` |
-| `OPENAI_MODEL` | OpenAI model setting reserved for the provider implementation |
-| `ANTHROPIC_MODEL` | Anthropic model setting reserved for the provider implementation |
-| `OLLAMA_MODEL` | Ollama model setting reserved for the provider implementation |
+| `LLM_PROVIDER` | Default claim extraction provider name: `openai`, `anthropic`, `ollama`, `lmstudio`, or a comma separated failover chain |
+| `LLM_FAILOVER_PROVIDERS` | Optional comma separated providers tried after `LLM_PROVIDER` fails |
+| `LLM_REQUEST_TIMEOUT_SECONDS` | HTTP timeout for LLM generation calls |
+| `LLM_HEALTH_TIMEOUT_SECONDS` | HTTP timeout for LLM health checks |
+| `LLM_COST_RATES` | Optional per million token rates. Format: `provider=input:output,provider:model=input:output` |
+| `OPENAI_API_KEY` | Required for OpenAI claim extraction |
+| `OPENAI_BASE_URL` | OpenAI compatible API base URL |
+| `OPENAI_MODEL` | OpenAI model name |
+| `ANTHROPIC_API_KEY` | Required for Anthropic claim extraction |
+| `ANTHROPIC_BASE_URL` | Anthropic API base URL |
+| `ANTHROPIC_MODEL` | Anthropic model name |
+| `ANTHROPIC_VERSION` | Anthropic API version header |
+| `ANTHROPIC_MAX_TOKENS` | Maximum Anthropic response tokens |
+| `OLLAMA_BASE_URL` | Ollama API base URL |
+| `OLLAMA_MODEL` | Ollama model name |
+| `LMSTUDIO_BASE_URL` | LM Studio OpenAI compatible API base URL |
+| `LMSTUDIO_MODEL` | LM Studio model name |
 | `SEARCH_PROVIDER` | Default evidence search provider. Use `brave` for now |
 | `BRAVE_SEARCH_API_KEY` | Required for live Brave Search evidence retrieval |
 | `BRAVE_SEARCH_ENDPOINT` | Brave web search endpoint |
@@ -175,6 +188,7 @@ Only `sqlite+aiosqlite` database URLs are supported initially.
 | Method | Path | Purpose |
 | --- | --- | --- |
 | `GET` | `/api/v1/health` | Service health check |
+| `GET` | `/api/v1/health/providers` | LLM provider health checks |
 | `POST` | `/api/v1/transcripts/from-url` | Create a stored transcript from a YouTube URL |
 | `POST` | `/api/v1/transcripts/upload` | Upload a `.txt`, `.srt`, `.vtt`, or JSON transcript fallback |
 | `GET` | `/api/v1/transcripts/{transcript_id}` | Return stored transcript metadata, segments, and chunks |

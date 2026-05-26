@@ -1,8 +1,28 @@
 from evidencechain.core.config import Settings, get_settings
 from evidencechain.models.factcheck import EvidenceProvider
 from evidencechain.providers.base import LLMProvider, SearchProvider
+from evidencechain.providers.llm import (
+    AnthropicProvider,
+    BaseLLMProvider,
+    FailoverLLMProvider,
+    LMStudioProvider,
+    OllamaProvider,
+    OpenAIProvider,
+    ProviderFactory,
+)
 from evidencechain.providers.search import BraveSearchProvider, UnconfiguredSearchProvider
-from evidencechain.providers.stubs import AnthropicProvider, OllamaProvider, OpenAIProvider
+
+_LLM_PROVIDER_FACTORIES: dict[str, ProviderFactory] = {
+    "openai": OpenAIProvider,
+    "anthropic": AnthropicProvider,
+    "ollama": OllamaProvider,
+    "lmstudio": LMStudioProvider,
+    "lm-studio": LMStudioProvider,
+}
+
+
+def register_llm_provider(name: str, factory: ProviderFactory) -> None:
+    _LLM_PROVIDER_FACTORIES[name.lower()] = factory
 
 
 def get_llm_provider(
@@ -10,17 +30,26 @@ def get_llm_provider(
     settings: Settings | None = None,
 ) -> LLMProvider:
     resolved_settings = settings or get_settings()
-    name = provider_name or resolved_settings.llm_provider
+    names = _provider_names(provider_name, resolved_settings)
+    providers = [_build_llm_provider(name, resolved_settings) for name in names]
+    if len(providers) == 1:
+        return providers[0]
+    return FailoverLLMProvider(providers)
 
-    providers: dict[str, LLMProvider] = {
-        "openai": OpenAIProvider(settings=resolved_settings),
-        "anthropic": AnthropicProvider(settings=resolved_settings),
-        "ollama": OllamaProvider(settings=resolved_settings),
-    }
+
+def _provider_names(provider_name: str | None, settings: Settings) -> list[str]:
+    if provider_name:
+        return [item.strip().lower() for item in provider_name.split(",") if item.strip()]
+    names = [settings.llm_provider.lower()]
+    names.extend(name for name in settings.llm_failover_providers if name not in names)
+    return names
+
+
+def _build_llm_provider(name: str, settings: Settings) -> BaseLLMProvider:
     try:
-        return providers[name.lower()]
+        return _LLM_PROVIDER_FACTORIES[name](settings)
     except KeyError as error:
-        supported = ", ".join(sorted(providers))
+        supported = ", ".join(sorted(_LLM_PROVIDER_FACTORIES))
         message = f"Unsupported LLM provider '{name}'. Supported providers: {supported}."
         raise ValueError(message) from error
 

@@ -17,7 +17,8 @@ Request:
 }
 ```
 
-`provider` is optional. Supported values are `openai`, `anthropic`, and `ollama`.
+`provider` is optional. Supported values are `openai`, `anthropic`, `ollama`, and `lmstudio`.
+Pass comma separated values to use request level failover.
 
 Success: `200 OK`
 
@@ -49,6 +50,12 @@ Errors:
 | --- | --- |
 | `404` | Transcript ID was not found |
 | `502` | Provider name is invalid or the provider call failed |
+
+## Provider Health
+
+`GET /health/providers`
+
+Returns the configured LLM provider health state. With failover configured, each provider is checked separately.
 
 ## List Transcript Claims
 
