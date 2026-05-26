@@ -220,5 +220,11 @@ __marimo__/
 # Local prompt files
 /Prompts/
 
+# EvidenceChain runtime outputs
+/storage/*.db
+/storage/*.db-*
+/reports/*
+!/reports/.gitkeep
+
 # VS Code workspace files
 *.code-workspace
