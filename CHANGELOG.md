@@ -6,6 +6,7 @@
 - Added transcript models, SQLite transcript storage, timestamp preserving parsing, chunking, retry logic, and API docs.
 - Added tests for transcript parsing, storage, chunking, and upload API behavior.
 - Added claim extraction schemas, prompt templates, provider interface stubs, SQLite claim tables, claim API endpoints, and tests.
+- Added the evidence retrieval engine with swappable search provider abstractions, functional Brave Search support, scoring, dedupe, caching, storage, API endpoints, and tests.
 
 ## 2026-05-25
 

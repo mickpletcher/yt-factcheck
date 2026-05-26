@@ -25,7 +25,7 @@ class FactCheckPipeline:
         results: list[VerificationResult] = []
         for claim in claims:
             evidence = await self.evidence_service.retrieve_evidence(claim)
-            result = await self.verification_service.verify_claim(claim, evidence)
+            result = await self.verification_service.verify_claim(claim, evidence.evidence)
             results.append(result)
 
         return results

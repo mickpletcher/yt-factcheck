@@ -10,7 +10,7 @@ The intended workflow is:
 4. Compare evidence against each claim.
 5. Generate a timestamped verification report with citations.
 
-Claim extraction is implemented behind a minimal pluggable LLM provider interface. Provider transports are interface stubs for now and are intended to be replaced by the full provider system in prompt 08.
+Claim extraction is implemented behind a minimal pluggable LLM provider interface. Evidence retrieval is implemented behind a swappable search provider interface. Brave Search is functional now. Tavily, Bing Search, and SerpAPI are wired as optional provider slots but are not implemented yet.
 
 ## Stack
 
@@ -122,6 +122,19 @@ See `.env.example` for supported settings.
 | `OPENAI_MODEL` | OpenAI model setting reserved for the provider implementation |
 | `ANTHROPIC_MODEL` | Anthropic model setting reserved for the provider implementation |
 | `OLLAMA_MODEL` | Ollama model setting reserved for the provider implementation |
+| `SEARCH_PROVIDER` | Default evidence search provider. Use `brave` for now |
+| `BRAVE_SEARCH_API_KEY` | Required for live Brave Search evidence retrieval |
+| `BRAVE_SEARCH_ENDPOINT` | Brave web search endpoint |
+| `TAVILY_API_KEY` | Reserved for optional Tavily provider support |
+| `BING_SEARCH_API_KEY` | Reserved for optional Bing Search provider support |
+| `SERPAPI_API_KEY` | Reserved for optional SerpAPI provider support |
+| `EVIDENCE_SEARCH_TIMEOUT_SECONDS` | HTTP timeout for evidence search |
+| `EVIDENCE_SEARCH_RETRY_ATTEMPTS` | Retry attempts for evidence search |
+| `EVIDENCE_SEARCH_RETRY_BACKOFF_SECONDS` | Base retry backoff for evidence search |
+| `EVIDENCE_SEARCH_RATE_LIMIT_PER_SECOND` | Per provider search request rate limit |
+| `EVIDENCE_SEARCH_CACHE_TTL_SECONDS` | SQLite search cache lifetime |
+| `EVIDENCE_SEARCH_MAX_QUERIES` | Maximum optimized queries generated per claim |
+| `EVIDENCE_SEARCH_RESULTS_PER_QUERY` | Results requested for each generated query |
 
 Only `sqlite+aiosqlite` database URLs are supported initially.
 
@@ -137,6 +150,8 @@ Only `sqlite+aiosqlite` database URLs are supported initially.
 | `POST` | `/api/v1/claims/extract` | Extract factual claims from stored transcript chunks |
 | `GET` | `/api/v1/claims/transcripts/{transcript_id}` | Return claims stored for a transcript |
 | `GET` | `/api/v1/claims/{claim_id}` | Return one stored claim |
+| `POST` | `/api/v1/evidence/retrieve` | Retrieve, rank, dedupe, and store evidence for a claim |
+| `GET` | `/api/v1/evidence/claims/{claim_id}` | Return stored evidence for a claim |
 
 ## Development Notes
 
@@ -144,4 +159,6 @@ Transcript ingestion is implemented in `src/evidencechain/services/transcript_se
 
 Claim extraction is implemented in `src/evidencechain/services/claim_service.py`. It processes transcript chunks, prompts an injected LLM provider for structured JSON, validates provider output with Pydantic, stores claims in SQLite, preserves timestamps, and categorizes claims as scientific, historical, medical, political, financial, legal, technology, or product.
 
-Detailed API docs are in `docs/transcripts-api.md` and `docs/claims-api.md`.
+Evidence retrieval is implemented in `src/evidencechain/services/evidence_service.py`. It converts a claim into optimized search queries, runs async parallel searches, caches provider results in SQLite, removes duplicate URLs, scores source credibility and relevance, stores evidence retrieval runs, and preserves source attribution.
+
+Detailed API docs are in `docs/transcripts-api.md`, `docs/claims-api.md`, and `docs/evidence-api.md`.

@@ -20,8 +20,32 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-4.1-mini"
     anthropic_model: str = "claude-3-5-haiku-latest"
     ollama_model: str = "llama3.1"
+    search_provider: str = "brave"
+    brave_search_api_key: str = ""
+    brave_search_endpoint: str = "https://api.search.brave.com/res/v1/web/search"
+    tavily_api_key: str = ""
+    bing_search_api_key: str = ""
+    serpapi_api_key: str = ""
+    evidence_search_timeout_seconds: float = 15.0
+    evidence_search_retry_attempts: int = 3
+    evidence_search_retry_backoff_seconds: float = 0.5
+    evidence_search_rate_limit_per_second: float = 1.0
+    evidence_search_cache_ttl_seconds: int = 3600
+    evidence_search_max_queries: int = 4
+    evidence_search_results_per_query: int = 5
     trusted_source_domains: list[str] = Field(
-        default_factory=lambda: ["nih.gov", "cdc.gov", "who.int", "edu", "gov"]
+        default_factory=lambda: [
+            "nih.gov",
+            "cdc.gov",
+            "who.int",
+            "edu",
+            "gov",
+            "nature.com",
+            "science.org",
+            "reuters.com",
+            "apnews.com",
+            "bbc.com",
+        ]
     )
 
     model_config = SettingsConfigDict(

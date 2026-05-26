@@ -1,10 +1,10 @@
-from evidencechain.models.factcheck import Claim, EvidenceSource, VerificationResult
+from evidencechain.models.factcheck import Claim, RetrievedEvidence, VerificationResult
 
 
 class VerificationService:
     async def verify_claim(
         self,
         claim: Claim,
-        evidence: list[EvidenceSource],
+        evidence: list[RetrievedEvidence],
     ) -> VerificationResult:
         raise NotImplementedError("Claim verification is not implemented yet.")

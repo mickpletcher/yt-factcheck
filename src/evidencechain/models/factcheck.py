@@ -127,9 +127,110 @@ class EvidenceSource(BaseModel):
     retrieved_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
+class EvidenceProvider(StrEnum):
+    brave = "brave"
+    tavily = "tavily"
+    bing = "bing"
+    serpapi = "serpapi"
+
+
+class EvidenceSourceType(StrEnum):
+    government = "government"
+    academic = "academic"
+    peer_reviewed = "peer_reviewed"
+    established_journalism = "established_journalism"
+    general = "general"
+
+
+class SearchQuery(BaseModel):
+    query: str = Field(min_length=1)
+    purpose: str = "general"
+
+    @field_validator("query", "purpose")
+    @classmethod
+    def normalize_query_text(cls, value: str) -> str:
+        return " ".join(value.split())
+
+
+class SearchResult(BaseModel):
+    title: str = ""
+    url: HttpUrl
+    snippet: str = ""
+    publisher: str = ""
+    provider: EvidenceProvider
+    query: str
+    published_at: str | None = None
+    raw: dict[str, object] = Field(default_factory=dict)
+
+    @field_validator("title", "snippet", "publisher", "query")
+    @classmethod
+    def normalize_result_text(cls, value: str) -> str:
+        return " ".join(value.split())
+
+
+class EvidenceScore(BaseModel):
+    source_type: EvidenceSourceType = EvidenceSourceType.general
+    credibility_score: float = Field(ge=0.0, le=1.0)
+    relevance_score: float = Field(ge=0.0, le=1.0)
+    quality_score: float = Field(ge=0.0, le=1.0)
+    ranking_score: float = Field(ge=0.0, le=1.0)
+
+
+class RetrievedEvidence(BaseModel):
+    id: int | None = None
+    claim_id: int | None = None
+    provider: EvidenceProvider
+    query: str
+    title: str
+    url: HttpUrl
+    publisher: str
+    snippet: str = ""
+    source_type: EvidenceSourceType = EvidenceSourceType.general
+    credibility_score: float = Field(ge=0.0, le=1.0)
+    relevance_score: float = Field(ge=0.0, le=1.0)
+    quality_score: float = Field(ge=0.0, le=1.0)
+    ranking_score: float = Field(ge=0.0, le=1.0)
+    attribution: str
+    retrieved_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
+class EvidenceRetrievalRequest(BaseModel):
+    claim_id: int | None = Field(default=None, gt=0)
+    claim_text: str | None = Field(default=None, min_length=1)
+    provider: EvidenceProvider | None = None
+    max_results: int = Field(default=10, ge=1, le=50)
+
+    @field_validator("claim_text")
+    @classmethod
+    def normalize_claim_text(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return " ".join(value.split())
+
+    @model_validator(mode="after")
+    def require_claim_id_or_text(self) -> "EvidenceRetrievalRequest":
+        if self.claim_id is None and not self.claim_text:
+            raise ValueError("claim_id or claim_text is required")
+        return self
+
+
+class EvidenceRetrievalResult(BaseModel):
+    run_id: int
+    claim_id: int | None = None
+    claim_text: str
+    provider: EvidenceProvider
+    queries: list[SearchQuery]
+    evidence: list[RetrievedEvidence]
+
+
+class EvidenceList(BaseModel):
+    claim_id: int
+    evidence: list[RetrievedEvidence]
+
+
 class VerificationResult(BaseModel):
     claim: Claim
     status: ClaimStatus = ClaimStatus.pending
     confidence: float = Field(default=0.0, ge=0.0, le=1.0)
-    evidence: list[EvidenceSource] = Field(default_factory=list)
+    evidence: list[RetrievedEvidence] = Field(default_factory=list)
     rationale: str = ""

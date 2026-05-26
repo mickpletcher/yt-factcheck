@@ -2,6 +2,8 @@ from typing import Protocol, TypeVar
 
 from pydantic import BaseModel
 
+from evidencechain.models.factcheck import SearchResult
+
 SchemaT = TypeVar("SchemaT", bound=BaseModel)
 
 
@@ -23,3 +25,17 @@ class LLMProvider(Protocol):
         request: LLMRequest,
         output_schema: type[SchemaT],
     ) -> SchemaT: ...
+
+
+class SearchProviderError(Exception):
+    pass
+
+
+class SearchProviderConfigurationError(SearchProviderError):
+    pass
+
+
+class SearchProvider(Protocol):
+    name: str
+
+    async def search(self, query: str, count: int) -> list[SearchResult]: ...

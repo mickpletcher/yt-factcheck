@@ -91,6 +91,59 @@ ON claim_extraction_runs(transcript_id);
 
 CREATE INDEX IF NOT EXISTS idx_claims_transcript_id
 ON claims(transcript_id);
+
+CREATE TABLE IF NOT EXISTS evidence_retrieval_runs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    claim_id INTEGER,
+    claim_text TEXT NOT NULL,
+    provider TEXT NOT NULL,
+    queries_json TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(claim_id) REFERENCES claims(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS evidence_sources (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_id INTEGER NOT NULL,
+    claim_id INTEGER,
+    provider TEXT NOT NULL,
+    query TEXT NOT NULL,
+    title TEXT NOT NULL,
+    url TEXT NOT NULL,
+    publisher TEXT NOT NULL,
+    snippet TEXT NOT NULL,
+    source_type TEXT NOT NULL,
+    credibility_score REAL NOT NULL,
+    relevance_score REAL NOT NULL,
+    quality_score REAL NOT NULL,
+    ranking_score REAL NOT NULL,
+    attribution TEXT NOT NULL,
+    retrieved_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    raw_result_json TEXT NOT NULL,
+    FOREIGN KEY(run_id) REFERENCES evidence_retrieval_runs(id) ON DELETE CASCADE,
+    FOREIGN KEY(claim_id) REFERENCES claims(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_evidence_retrieval_runs_claim_id
+ON evidence_retrieval_runs(claim_id);
+
+CREATE INDEX IF NOT EXISTS idx_evidence_sources_claim_id
+ON evidence_sources(claim_id);
+
+CREATE INDEX IF NOT EXISTS idx_evidence_sources_run_id
+ON evidence_sources(run_id);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_evidence_sources_run_url
+ON evidence_sources(run_id, url);
+
+CREATE TABLE IF NOT EXISTS search_cache (
+    provider TEXT NOT NULL,
+    query TEXT NOT NULL,
+    response_json TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY(provider, query)
+);
 """
 
 
