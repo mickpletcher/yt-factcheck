@@ -34,7 +34,7 @@ Working now:
 - Brave Search evidence retrieval
 - Evidence scoring
 - Report generation
-- Full pipeline queue
+- Full pipeline queue API
 - React dashboard
 - Docker deployment
 - GitHub Actions CI
@@ -211,7 +211,7 @@ The dashboard supports:
 
 - Paste a YouTube URL.
 - Upload a transcript file.
-- Watch pipeline progress.
+- Watch staged progress while it runs transcript, claim, evidence, scoring, and report endpoints.
 - Review extracted claims.
 - Expand evidence for each claim.
 - Open timestamp links back to YouTube.

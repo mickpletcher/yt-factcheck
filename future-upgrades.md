@@ -11,6 +11,7 @@ These are the highest value upgrades for making the MVP easier to operate and sa
 - [ ] Add a database migration path for SQLite schema changes.
 - [ ] Implement a second evidence search provider, starting with Tavily or Bing Search.
 - [ ] Add evidence provider failover so live runs are not dependent on Brave Search only.
+- [ ] Wire the React dashboard to the queued pipeline API instead of browser-side stage orchestration.
 - [ ] Add a provider readiness endpoint or CLI diagnostic that reports configured LLM and search capabilities.
 - [ ] Improve user-facing pipeline failure messages for missing captions, blocked captions, bad metadata, and provider errors.
 - [ ] Add pipeline cancellation support for queued and running jobs.
@@ -31,6 +32,7 @@ These improve accuracy, usability, and day to day workflow once the core operati
 - [ ] Add report comparison between multiple runs of the same video.
 - [ ] Add editable trusted source domain management from the dashboard.
 - [ ] Add frontend test coverage for core dashboard flows.
+- [ ] Add frontend linting for TypeScript and React code.
 - [ ] Add API contract tests that compare backend response models with frontend TypeScript types.
 - [ ] Add admin visibility for provider costs, token usage, cache hit rate, and failed search queries.
 

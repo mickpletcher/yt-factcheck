@@ -10,7 +10,7 @@ The project is in a solid MVP state. The core architecture is clean, tests pass,
 
 ## Current Validation
 
-Validated from the project virtual environment and frontend workspace:
+Validated from the project virtual environment and frontend workspace on 2026-05-25:
 
 | Check | Command | Result |
 | --- | --- | --- |
@@ -20,6 +20,20 @@ Validated from the project virtual environment and frontend workspace:
 | Frontend build | `npm run build` from `frontend` | Passed and now covered by CI |
 
 Note: running `python -m pytest` with the Windows Store Python 3.11 failed because dependencies such as `aiosqlite` were not installed there. The repo targets Python 3.12 and the local `.venv` is the correct environment.
+
+## Fresh Review Notes
+
+Reviewed again on 2026-05-25 against the live repo.
+
+No urgent breakage was found. The project still validates cleanly, and the tracked docs mostly match the implementation.
+
+Items that should be corrected or improved next:
+
+1. The React dashboard does not use the queued pipeline endpoint yet. It calls transcript, claim, evidence, scoring, and report endpoints directly from the browser. That works for the MVP, but it bypasses persisted job progress, retry behavior, worker health, and future cancellation support.
+2. Provider readiness is incomplete. `/api/v1/health/providers` checks LLM providers only. Search readiness, Brave key state, and end to end workflow readiness are still missing.
+3. Frontend quality gates are thin. CI builds the dashboard, but there are no component tests, hook tests, API client tests, or lint checks for TypeScript.
+4. Docker is documented and deployable, but CI does not run a Compose health smoke test. A broken Nginx, startup script, or container health check could slip past the current checks.
+5. Public exposure still needs access control and rate limiting. The current Docker and Nginx defaults are reasonable for private use, not public use.
 
 ## Project Purpose
 
@@ -322,14 +336,16 @@ Keep uploaded transcript fallback prominent. Add clearer user-facing failure mes
 Priority order:
 
 1. Add a database migration path.
-2. Implement one more evidence search provider.
-3. Add a provider readiness endpoint or CLI diagnostic.
-4. Improve user-facing pipeline failure messages.
-5. Add cancellation support for queued and running jobs.
-6. Add report export cleanup or retention controls.
-7. Add integration tests for Docker Compose health checks.
-8. Add authenticated access before exposing this publicly.
-9. Add rate limiting if deployed beyond personal use.
+2. Wire the React dashboard to the queued pipeline API instead of browser-side stage orchestration.
+3. Implement one more evidence search provider.
+4. Add a provider readiness endpoint or CLI diagnostic for LLM and search capability.
+5. Improve user-facing pipeline failure messages.
+6. Add cancellation support for queued and running jobs.
+7. Add frontend tests for the dashboard workflow and API client.
+8. Add report export cleanup or retention controls.
+9. Add integration tests for Docker Compose health checks.
+10. Add authenticated access before exposing this publicly.
+11. Add rate limiting if deployed beyond personal use.
 
 ## Bottom Line
 
