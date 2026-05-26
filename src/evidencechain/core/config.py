@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     transcript_retry_attempts: int = 3
     transcript_retry_backoff_seconds: float = 0.5
     transcript_fetch_timeout_seconds: float = 20.0
+    llm_provider: str = "openai"
+    openai_model: str = "gpt-4.1-mini"
+    anthropic_model: str = "claude-3-5-haiku-latest"
+    ollama_model: str = "llama3.1"
     trusted_source_domains: list[str] = Field(
         default_factory=lambda: ["nih.gov", "cdc.gov", "who.int", "edu", "gov"]
     )

@@ -10,7 +10,7 @@ The intended workflow is:
 4. Compare evidence against each claim.
 5. Generate a timestamped verification report with citations.
 
-Claim extraction is not implemented yet. This repository currently supports transcript ingestion, transcript storage, transcript chunking, service boundaries, configuration, logging, database startup, tests, Docker, and CI.
+Claim extraction is implemented behind a minimal pluggable LLM provider interface. Provider transports are interface stubs for now and are intended to be replaced by the full provider system in prompt 08.
 
 ## Stack
 
@@ -118,6 +118,10 @@ See `.env.example` for supported settings.
 | `TRANSCRIPT_RETRY_ATTEMPTS` | Retry attempts for YouTube metadata and caption fetches |
 | `TRANSCRIPT_RETRY_BACKOFF_SECONDS` | Base retry backoff in seconds |
 | `TRANSCRIPT_FETCH_TIMEOUT_SECONDS` | HTTP timeout for caption download |
+| `LLM_PROVIDER` | Default claim extraction provider name: `openai`, `anthropic`, or `ollama` |
+| `OPENAI_MODEL` | OpenAI model setting reserved for the provider implementation |
+| `ANTHROPIC_MODEL` | Anthropic model setting reserved for the provider implementation |
+| `OLLAMA_MODEL` | Ollama model setting reserved for the provider implementation |
 
 Only `sqlite+aiosqlite` database URLs are supported initially.
 
@@ -130,11 +134,14 @@ Only `sqlite+aiosqlite` database URLs are supported initially.
 | `POST` | `/api/v1/transcripts/upload` | Upload a `.txt`, `.srt`, `.vtt`, or JSON transcript fallback |
 | `GET` | `/api/v1/transcripts/{transcript_id}` | Return stored transcript metadata, segments, and chunks |
 | `GET` | `/api/v1/transcripts/{transcript_id}/chunks` | Return stored chunks for a transcript |
+| `POST` | `/api/v1/claims/extract` | Extract factual claims from stored transcript chunks |
+| `GET` | `/api/v1/claims/transcripts/{transcript_id}` | Return claims stored for a transcript |
+| `GET` | `/api/v1/claims/{claim_id}` | Return one stored claim |
 
 ## Development Notes
 
 Transcript ingestion is implemented in `src/evidencechain/services/transcript_service.py`. It extracts YouTube metadata through `yt-dlp`, retrieves captions when available, normalizes uploaded fallback transcript files, preserves timestamps when present, stores transcript records in SQLite, and creates timestamped chunks.
 
-The pipeline in `src/evidencechain/pipelines/factcheck_pipeline.py` still stops before claim extraction because claim extraction is intentionally out of scope for the transcript ingestion phase.
+Claim extraction is implemented in `src/evidencechain/services/claim_service.py`. It processes transcript chunks, prompts an injected LLM provider for structured JSON, validates provider output with Pydantic, stores claims in SQLite, preserves timestamps, and categorizes claims as scientific, historical, medical, political, financial, legal, technology, or product.
 
-Detailed transcript API docs are in `docs/transcripts-api.md`.
+Detailed API docs are in `docs/transcripts-api.md` and `docs/claims-api.md`.

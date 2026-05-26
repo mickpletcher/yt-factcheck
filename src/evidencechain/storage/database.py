@@ -55,11 +55,42 @@ CREATE TABLE IF NOT EXISTS transcript_chunks (
     FOREIGN KEY(transcript_id) REFERENCES transcripts(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS claim_extraction_runs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    transcript_id INTEGER NOT NULL,
+    provider TEXT NOT NULL,
+    prompt_version TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(transcript_id) REFERENCES transcripts(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS claims (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    transcript_id INTEGER NOT NULL,
+    extraction_run_id INTEGER NOT NULL,
+    chunk_position INTEGER NOT NULL,
+    text TEXT NOT NULL,
+    category TEXT NOT NULL,
+    confidence REAL NOT NULL,
+    start_seconds REAL NOT NULL,
+    end_seconds REAL NOT NULL,
+    source_text TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(transcript_id) REFERENCES transcripts(id) ON DELETE CASCADE,
+    FOREIGN KEY(extraction_run_id) REFERENCES claim_extraction_runs(id) ON DELETE CASCADE
+);
+
 CREATE INDEX IF NOT EXISTS idx_transcript_segments_transcript_id
 ON transcript_segments(transcript_id);
 
 CREATE INDEX IF NOT EXISTS idx_transcript_chunks_transcript_id
 ON transcript_chunks(transcript_id);
+
+CREATE INDEX IF NOT EXISTS idx_claim_extraction_runs_transcript_id
+ON claim_extraction_runs(transcript_id);
+
+CREATE INDEX IF NOT EXISTS idx_claims_transcript_id
+ON claims(transcript_id);
 """
 
 
