@@ -1,0 +1,4 @@
+#!/bin/sh
+
+echo "Pushes are disabled for this workspace." >&2
+exit 1

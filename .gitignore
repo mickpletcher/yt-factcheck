@@ -216,3 +216,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Local prompt files
+/Prompts/
+
+# VS Code workspace files
+*.code-workspace
