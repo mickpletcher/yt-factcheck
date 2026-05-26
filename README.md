@@ -100,7 +100,7 @@ The dashboard supports:
 
 - YouTube URL transcript ingestion
 - Transcript file upload
-- Live client side pipeline progress
+- Live pipeline progress
 - Searchable claims
 - Expandable evidence sections
 - Timestamp links back to YouTube
@@ -180,6 +180,9 @@ See `.env.example` for supported settings.
 | `EVIDENCE_SEARCH_CACHE_TTL_SECONDS` | SQLite search cache lifetime |
 | `EVIDENCE_SEARCH_MAX_QUERIES` | Maximum optimized queries generated per claim |
 | `EVIDENCE_SEARCH_RESULTS_PER_QUERY` | Results requested for each generated query |
+| `PIPELINE_WORKER_COUNT` | Number of in process asyncio pipeline workers |
+| `PIPELINE_RETRY_ATTEMPTS` | Maximum automatic attempts for a queued pipeline job |
+| `PIPELINE_RETRY_BACKOFF_SECONDS` | Delay before an automatic pipeline retry |
 
 Only `sqlite+aiosqlite` database URLs are supported initially.
 
@@ -205,6 +208,13 @@ Only `sqlite+aiosqlite` database URLs are supported initially.
 | `GET` | `/api/v1/reports/transcripts/{transcript_id}.html` | Return a public HTML report |
 | `GET` | `/api/v1/reports/transcripts/{transcript_id}.md` | Return a Markdown report |
 | `POST` | `/api/v1/reports/transcripts/{transcript_id}/exports/{report_format}` | Export a report to disk |
+| `POST` | `/api/v1/pipelines/factcheck` | Queue a full fact check pipeline job |
+| `GET` | `/api/v1/pipelines/jobs` | Return recent pipeline jobs |
+| `GET` | `/api/v1/pipelines/jobs/{job_id}` | Return job progress and stage status |
+| `POST` | `/api/v1/pipelines/jobs/{job_id}/retry` | Retry a failed pipeline job |
+| `GET` | `/api/v1/pipelines/jobs/{job_id}/events` | Return structured pipeline events |
+| `GET` | `/api/v1/pipelines/metrics` | Return execution metrics |
+| `GET` | `/api/v1/pipelines/workers` | Return asyncio worker health |
 
 ## Development Notes
 
@@ -218,4 +228,6 @@ Verdict scoring is implemented in `src/evidencechain/services/scoring_service.py
 
 Report rendering is implemented in `src/evidencechain/services/report_service.py`. It builds one JSON report object, then renders HTML, Markdown, or JSON exports with video metadata, verdict summaries, confidence indicators, citations, and linked evidence.
 
-Detailed API docs are in `docs/transcripts-api.md`, `docs/claims-api.md`, `docs/evidence-api.md`, `docs/scoring-api.md`, and `docs/reports-api.md`.
+Pipeline orchestration is implemented in `src/evidencechain/pipelines/orchestration.py`. It uses in process asyncio workers, a queue abstraction, SQLite persisted job and stage state, retry handling, recovery for interrupted queued or running jobs, structured logs, and execution metrics.
+
+Detailed API docs are in `docs/transcripts-api.md`, `docs/claims-api.md`, `docs/evidence-api.md`, `docs/scoring-api.md`, `docs/reports-api.md`, and `docs/pipelines-api.md`.

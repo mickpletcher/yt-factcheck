@@ -46,6 +46,9 @@ class Settings(BaseSettings):
     evidence_search_cache_ttl_seconds: int = 3600
     evidence_search_max_queries: int = 4
     evidence_search_results_per_query: int = 5
+    pipeline_worker_count: int = 1
+    pipeline_retry_attempts: int = 3
+    pipeline_retry_backoff_seconds: float = 1.0
     trusted_source_domains: list[str] = Field(
         default_factory=lambda: [
             "nih.gov",

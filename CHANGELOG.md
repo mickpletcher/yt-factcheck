@@ -9,6 +9,7 @@
 - Added the evidence retrieval engine with swappable search provider abstractions, functional Brave Search support, scoring, dedupe, caching, storage, API endpoints, and tests.
 - Added the verdict scoring engine with stored evidence comparison, citation validation, hallucination safeguards, scoring API endpoints, docs, and tests.
 - Added the reporting engine with JSON, HTML, Markdown, disk exports, public report templates, report API endpoints, docs, and tests.
+- Added asyncio pipeline orchestration with persistent queue state, worker lifecycle, retries, failure recovery, progress tracking, structured events, metrics, API endpoints, docs, and tests.
 
 ## 2026-05-25
 

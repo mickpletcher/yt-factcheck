@@ -160,6 +160,61 @@ CREATE TABLE IF NOT EXISTS search_cache (
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY(provider, query)
 );
+
+CREATE TABLE IF NOT EXISTS pipeline_jobs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    youtube_url TEXT NOT NULL,
+    status TEXT NOT NULL,
+    progress REAL NOT NULL DEFAULT 0,
+    current_stage TEXT,
+    transcript_id INTEGER,
+    claim_ids_json TEXT NOT NULL DEFAULT '[]',
+    report_json TEXT,
+    error_message TEXT,
+    retry_count INTEGER NOT NULL DEFAULT 0,
+    max_attempts INTEGER NOT NULL,
+    queued_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    started_at TEXT,
+    completed_at TEXT,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(transcript_id) REFERENCES transcripts(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_pipeline_jobs_status
+ON pipeline_jobs(status);
+
+CREATE TABLE IF NOT EXISTS pipeline_stage_runs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    job_id INTEGER NOT NULL,
+    stage TEXT NOT NULL,
+    status TEXT NOT NULL,
+    attempt INTEGER NOT NULL DEFAULT 1,
+    progress REAL NOT NULL DEFAULT 0,
+    started_at TEXT,
+    completed_at TEXT,
+    duration_ms REAL,
+    error_message TEXT,
+    metadata_json TEXT NOT NULL DEFAULT '{}',
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(job_id) REFERENCES pipeline_jobs(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_pipeline_stage_runs_job_id
+ON pipeline_stage_runs(job_id);
+
+CREATE TABLE IF NOT EXISTS pipeline_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    job_id INTEGER NOT NULL,
+    stage TEXT,
+    event_type TEXT NOT NULL,
+    message TEXT NOT NULL,
+    metadata_json TEXT NOT NULL DEFAULT '{}',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(job_id) REFERENCES pipeline_jobs(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_pipeline_events_job_id
+ON pipeline_events(job_id);
 """
 
 
